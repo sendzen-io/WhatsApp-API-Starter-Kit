@@ -92,6 +92,8 @@ const AuthenticationTemplateForm: React.FC<AuthenticationTemplateFormProps> = ({
     const handleButtonTypeChange = (index: number, newType: 'copy_code' | 'one_tap' | 'zero_tap') => {
         if (!buttons) return;
         const oldButton = buttons.buttons[index];
+        if (!oldButton) return;
+        
         let newButton: AuthOtpButton;
 
         const text = 'text' in oldButton ? oldButton.text : '';

@@ -122,7 +122,8 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
   };
 
   const removeComponent = (index: number) => {
-    if (components[index].type === "body") return; // Body is required
+    const component = components[index];
+    if (!component || component.type === "body") return; // Body is required
     setComponents((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -418,7 +419,11 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
     const swapButtons = (index1: number, index2: number) => {
       const newButtons = [...component.buttons];
       const temp = newButtons[index1];
-      newButtons[index1] = newButtons[index2];
+      const button2 = newButtons[index2];
+      
+      if (temp === undefined || button2 === undefined) return;
+      
+      newButtons[index1] = button2;
       newButtons[index2] = temp;
       updateButtons(newButtons);
     };
