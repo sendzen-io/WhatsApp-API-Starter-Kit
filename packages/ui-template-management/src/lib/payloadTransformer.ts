@@ -49,11 +49,16 @@ export class PayloadTransformer {
    * Transform internal template payload to Meta API format
    */
   static transformToMeta(payload: CreateTemplatePayload): MetaTemplatePayload {
+    // Transform components first
+    const components = payload.components.map(component => 
+      this.transformComponent(component)
+    );
+
     const metaPayload: MetaTemplatePayload = {
       name: payload.name,
       language: payload.language,
       category: payload.category,
-      components: [],
+      components,
     };
 
     // Add optional fields
@@ -64,11 +69,6 @@ export class PayloadTransformer {
     if ('message_send_ttl_seconds' in payload && payload.message_send_ttl_seconds) {
       metaPayload.message_send_ttl_seconds = payload.message_send_ttl_seconds;
     }
-
-    // Transform components
-    metaPayload.components = payload.components.map((component: any) => 
-      this.transformComponent(component)
-    );
 
     return metaPayload;
   }
@@ -226,7 +226,7 @@ export class PayloadTransformer {
   /**
    * Transform Meta component back to internal format
    */
-  private static transformComponentFromMeta(metaComponent: any): any {
+  private static transformComponentFromMeta(metaComponent: any): TemplateComponent | AuthTemplateComponent {
     const component: any = {
       type: metaComponent.type.toLowerCase(),
     };

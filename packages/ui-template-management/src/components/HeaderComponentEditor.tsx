@@ -9,12 +9,9 @@ import { Label } from '@workspace/ui-core/components/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@workspace/ui-core/components/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@workspace/ui-core/components/tabs';
 import { Trash2, Loader2 } from 'lucide-react';
-import { MetaFileUploadService } from '../lib/metaFileUploadService';
+import { fileUploadService, FileUploadService } from '../lib/fileUploadService';
+import { useWabaId } from '../hooks/useWabaId';
 import FilePreview from './FilePreview';
-
-// Meta API Configuration - These should be passed as props or from environment
-const META_APP_ID = "413460000639062"; // Replace with your actual Meta App ID
-const META_ACCESS_TOKEN = "EAAF4Cih3iFYBPvdZCy7FXe0LXiwxAy6mrbowld7SZBM4EQTYPEoTUohZBg0T5d7H7PeombfIaVTR169kJiL4s9AbZA8qwVaIt3AnheWZBNnubK5JurZBQePddIoaeHnfKlWpKIFRIKx0DV63CXhTBaigYzttEZCnsgpNnbDuwX8ZBTMZAXpIFU3aHbWMTygVNzd4Bc4TlM4ET8pvEBtoxbDgkd4oEmpZCTz3Il6kdhV8vKbqhKwQZDZD"; // Replace with your actual access token
 
 const MEDIA_CONSTRAINTS = {
     image: {
@@ -54,6 +51,7 @@ const HeaderComponentEditor: React.FC<HeaderComponentEditorProps> = ({
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
     const [uploadedFileId, setUploadedFileId] = useState<string | null>(null);
+    const wabaId = useWabaId();
 
     const handleFormatChange = (value: 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'LOCATION') => {
         // Reset uploaded file state when changing header type
@@ -99,34 +97,33 @@ const HeaderComponentEditor: React.FC<HeaderComponentEditorProps> = ({
         setUploadError(null);
 
         if (file) {
-            // Validate file using the Meta upload service
-            const validation = MetaFileUploadService.validateFile(file);
+            // Validate file using the service
+            const validation = FileUploadService.validateFile(file);
             if (!validation.isValid) {
                 setUploadError(validation.error || 'Invalid file');
                 return;
             }
 
+            if (!wabaId) {
+                setUploadError('WABA functionality is not available in open source mode. Please use direct file URLs instead.');
+                return;
+            }
+
             setIsUploading(true);
             try {
-                // Create Meta upload service instance
-                const metaUploadService = new MetaFileUploadService(META_APP_ID, META_ACCESS_TOKEN);
+                const result = await fileUploadService.uploadFile(file, wabaId);
                 
-                // Upload file using Meta's Resumable Upload API
-                const result = await metaUploadService.uploadFile(file);
-                
-                if (result.success && result.fileHandle) {
-                    // Store the uploaded file and file handle for preview
+                if (result.success && result.fileId) {
+                    // Store the uploaded file and file ID for preview
                     setUploadedFile(file);
-                    setUploadedFileId(result.fileHandle);
-                    // Use the file handle as the URL for the template
-                    handleMediaExampleChange(result.fileHandle);
-                    
-                    console.log("File uploaded successfully via Meta API:", result.fileHandle);
+                    setUploadedFileId(result.fileId);
+                    // Use the file ID as the URL for the template
+                    handleMediaExampleChange(result.fileId);
                 } else {
                     setUploadError(result.error || 'File upload failed. Please try again.');
                 }
             } catch (error) {
-                console.error("Meta API file upload failed:", error);
+                console.error("File upload failed:", error);
                 setUploadError("File upload failed. Please try again.");
             } finally {
                 setIsUploading(false);
@@ -201,11 +198,12 @@ const HeaderComponentEditor: React.FC<HeaderComponentEditorProps> = ({
                                     id="file-upload" 
                                     type="file" 
                                     onChange={handleFileChange} 
-                                    disabled={isUploading} 
+                                    disabled={isUploading || !wabaId} 
                                     accept={MEDIA_CONSTRAINTS[component.format.toLowerCase() as 'image'|'video'|'document'].types.join(',')} 
                                 />
                                 {isUploading && <Loader2 className="h-5 w-5 animate-spin" />}
                             </div>
+                            {!wabaId && <p className="text-sm text-yellow-600 mt-2">WABA functionality is not available in open source mode. Please use direct file URLs instead.</p>}
                             <p className="text-sm text-muted-foreground">
                                 Max size: {MEDIA_CONSTRAINTS[component.format.toLowerCase() as 'image'|'video'|'document'].maxSize / 1024 / 1024}MB.
                                 Supported types: {MEDIA_CONSTRAINTS[component.format.toLowerCase() as 'image'|'video'|'document'].types.map(t => t.split('/')[1]).join(', ')}

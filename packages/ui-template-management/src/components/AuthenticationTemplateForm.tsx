@@ -140,7 +140,7 @@ const AuthenticationTemplateForm: React.FC<AuthenticationTemplateFormProps> = ({
                     <div className="flex justify-between items-center">
                         <CardTitle>Footer</CardTitle>
                         {!footer ? (
-                            <Button variant="outline" size="sm" onClick={() => setFooter({ type: 'FOOTER' })}><PlusCircle className="h-4 w-4 mr-2"/>Add Footer</Button>
+                           <Button variant="outline" size="sm" onClick={() => setFooter({ type: 'FOOTER' })}><PlusCircle className="h-4 w-4 mr-2"/>Add Footer</Button>
                         ) : (
                            <Button variant="ghost" size="sm" onClick={() => setFooter(null)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
                         )}
@@ -164,7 +164,7 @@ const AuthenticationTemplateForm: React.FC<AuthenticationTemplateFormProps> = ({
                      <div className="flex justify-between items-center">
                         <CardTitle>OTP Buttons</CardTitle>
                         {!buttons ? (
-                            <Button variant="outline" size="sm" onClick={() => setButtons({ type: 'BUTTONS', buttons: [] })}><PlusCircle className="h-4 w-4 mr-2"/>Add Buttons</Button>
+                             <Button variant="outline" size="sm" onClick={() => setButtons({ type: 'BUTTONS', buttons: [] })}><PlusCircle className="h-4 w-4 mr-2"/>Add Buttons</Button>
                         ) : (
                              <Button variant="ghost" size="sm" onClick={() => setButtons(null)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
                         )}
