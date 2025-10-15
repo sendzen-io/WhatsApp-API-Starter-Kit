@@ -1,25 +1,25 @@
 
 // Buttons
 export interface UrlButton {
-  type: 'url';
+  type: 'URL';
   text: string;
   url: string;
   example?: string[];
 }
 
 export interface PhoneNumberButton {
-  type: 'phone_number';
+  type: 'PHONE_NUMBER';
   text: string;
   phone_number: string;
 }
 
 export interface QuickReplyButton {
-  type: 'quick_reply' | 'QUICK_REPLY';
+  type: 'QUICK_REPLY';
   text: string;
 }
 
 export interface CopyCodeButton {
-  type: 'copy_code' | 'COPY_CODE';
+  type: 'COPY_CODE';
   example: string;
 }
 
@@ -27,8 +27,8 @@ export type TemplateButton = UrlButton | PhoneNumberButton | QuickReplyButton | 
 
 // Components
 export interface HeaderTextComponent {
-  type: 'header';
-  format: 'text';
+  type: 'HEADER';
+  format: 'TEXT';
   text: string;
   example?: {
     header_text: string[];
@@ -36,8 +36,8 @@ export interface HeaderTextComponent {
 }
 
 export interface HeaderMediaComponent {
-  type: 'header';
-  format: 'image' | 'video' | 'document';
+  type: 'HEADER';
+  format: 'IMAGE' | 'VIDEO' | 'DOCUMENT';
   example: {
     header_handle: [string];
   }
@@ -45,19 +45,19 @@ export interface HeaderMediaComponent {
 
 
 export interface HeaderLocationComponent {
-  type: 'header';
-  format: 'location';
+  type: 'HEADER';
+  format: 'LOCATION';
 }
 
 export interface HeaderProductComponent {
-  type: 'header';
-  format: 'product';
+  type: 'HEADER';
+  format: 'PRODUCT';
 }
 
 export type HeaderComponent = HeaderTextComponent | HeaderMediaComponent | HeaderLocationComponent | HeaderProductComponent;
 
 export interface BodyComponent {
-  type: 'body';
+  type: 'BODY';
   text: string;
   example?: {
     body_text?: string[][];
@@ -69,17 +69,17 @@ export interface BodyComponent {
 }
 
 export interface FooterComponent {
-  type: 'footer';
+  type: 'FOOTER';
   text: string;
 }
 
 export interface ButtonsComponent {
-  type: 'buttons';
+  type: 'BUTTONS';
   buttons: TemplateButton[];
 }
 
 export interface LimitedTimeOfferComponent {
-  type: 'limited_time_offer';
+  type: 'LIMITED_TIME_OFFER';
   limited_time_offer: {
     text: string;
     has_expiration?: boolean;
@@ -92,14 +92,14 @@ export type MediaCarouselButton = UrlButton | PhoneNumberButton | QuickReplyButt
 export interface MediaCarouselCard {
   components: (
     | {
-      type: 'header';
-      format: 'image' | 'video';
+      type: 'HEADER';
+      format: 'IMAGE' | 'VIDEO';
       example: {
         header_handle: [string];
       };
     }
     | {
-      type: 'buttons';
+      type: 'BUTTONS';
       buttons: MediaCarouselButton[];
     }
   )[];
@@ -107,7 +107,7 @@ export interface MediaCarouselCard {
 
 // Product Carousel Template
 export interface SPMButton {
-  type: 'spm';
+  type: 'SPM';
   text: string;
 }
 
@@ -117,7 +117,7 @@ export interface ProductCarouselCard {
   components: (
     | HeaderProductComponent
     | {
-      type: 'buttons';
+      type: 'BUTTONS';
       buttons: ProductCarouselButton[];
     }
   )[];
@@ -125,7 +125,7 @@ export interface ProductCarouselCard {
 
 // Generic Carousel Component
 export interface CarouselComponent {
-  type: 'carousel';
+  type: 'CAROUSEL';
   cards: (MediaCarouselCard | ProductCarouselCard)[];
 }
 
@@ -166,17 +166,17 @@ export interface CatalogTemplate {
 
 // Authentication Template
 export interface AuthBodyComponent {
-  type: 'body';
+  type: 'BODY';
   add_security_recommendation?: boolean;
 }
 
 export interface AuthFooterComponent {
-  type: 'footer';
+  type: 'FOOTER';
   code_expiration_minutes?: number;
 }
 
 export interface AuthOneTapButton {
-  type: 'otp';
+  type: 'OTP';
   otp_type: 'one_tap';
   text?: string; // copy_code_button_text
   autofill_text?: string;
@@ -187,7 +187,7 @@ export interface AuthOneTapButton {
 }
 
 export interface AuthZeroTapButton {
-  type: 'otp';
+  type: 'OTP';
   otp_type: 'zero_tap';
   text?: string; // copy_code_button_text
   autofill_text?: string;
@@ -199,7 +199,7 @@ export interface AuthZeroTapButton {
 }
 
 export interface AuthCopyCodeButton {
-  type: 'otp';
+  type: 'OTP';
   otp_type: 'copy_code';
   text?: string;
 }
@@ -207,7 +207,7 @@ export interface AuthCopyCodeButton {
 export type AuthOtpButton = AuthOneTapButton | AuthZeroTapButton | AuthCopyCodeButton;
 
 export interface AuthButtonsComponent {
-  type: 'buttons';
+  type: 'BUTTONS';
   buttons: AuthOtpButton[];
 }
 
@@ -223,7 +223,7 @@ export interface AuthenticationTemplate {
 
 // Call Permission Request Template
 export interface CallPermissionRequestComponent {
-  type: 'call_permission_request';
+  type: 'CALL_PERMISSION_REQUEST';
 }
 
 export type CallPermissionRequestTemplateComponent = BodyComponent | CallPermissionRequestComponent;

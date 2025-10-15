@@ -4,6 +4,7 @@ import React, { useState, useCallback, useEffect } from "react";
 import type {
   CreateTemplatePayload,
   HeaderComponent,
+  HeaderMediaComponent,
   BodyComponent,
   FooterComponent,
   TemplateComponent,
@@ -30,7 +31,7 @@ import {
 } from "@workspace/ui-core/components/select";
 import { Textarea } from "@workspace/ui-core/components/textarea";
 import { Separator } from "@workspace/ui-core/components/separator";
-import { PlusCircle, Trash2, ChevronUp, ChevronDown } from "lucide-react";
+import { PlusCircle, Trash2, ChevronUp, ChevronDown, Loader2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,12 +42,17 @@ import AuthenticationTemplateForm from "./AuthenticationTemplateForm";
 import { AuthTemplateComponent } from "../types/templateTypes";
 import { SUPPORTED_LANGUAGES } from "../lib/languages";
 import HeaderComponentEditor from "./HeaderComponentEditor";
+import { useToast } from "@workspace/ui-core/hooks/use-toast";
+import { useTemplateValidation } from "../hooks/useTemplateValidation";
+import { Alert, AlertDescription } from "@workspace/ui-core/components/alert";
+import { AlertTriangle, CheckCircle, Info } from "lucide-react";
 
 interface CreateTemplateUIProps {
   onCancel: () => void;
   onSubmit: (template: CreateTemplatePayload) => void;
   dictionary?: any; // Add a proper dictionary type later
   onFileUpload?: (file: File) => Promise<string>;
+  isLoading?: boolean;
 }
 
 const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
@@ -54,6 +60,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
   onSubmit,
   dictionary,
   onFileUpload,
+  isLoading = false,
 }) => {
   const [name, setName] = useState("");
   const [language, setLanguage] = useState("");
@@ -62,14 +69,39 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
   >("MARKETING");
 
   const [components, setComponents] = useState<TemplateComponent[]>([
-    { type: "body", text: "" },
+    { type: "BODY", text: "" },
   ]);
-  const [authComponents, setAuthComponents] = useState<AuthTemplateComponent[]>(
-    []
-  );
+  const [authComponents, setAuthComponents] = useState<AuthTemplateComponent[]>([
+    { type: "BODY" }
+  ]);
   const [errors, setErrors] = useState<Record<string, any>>({});
   const [isSubmittedOnce, setIsSubmittedOnce] = useState(false);
   const [isFormValid, setIsFormValid] = useState(false);
+  const { toast } = useToast();
+  const { validateTemplate, isValid, errors: validationErrors, warnings, userErrors, userWarnings, errorMessage, clearValidation } = useTemplateValidation();
+
+  // Real-time validation
+  useEffect(() => {
+    if (name && language && category) {
+      let payload: CreateTemplatePayload;
+      switch (category) {
+        case "MARKETING":
+          payload = { name, language, category, components };
+          break;
+        case "UTILITY":
+          payload = { name, language, category, components };
+          break;
+        case "AUTHENTICATION":
+          payload = { name, language, category, components: authComponents };
+          break;
+        default:
+          return;
+      }
+      validateTemplate(payload);
+    } else {
+      clearValidation();
+    }
+  }, [name, language, category, components, authComponents, validateTemplate, clearValidation]);
 
   const handleCategoryChange = (
     value: "MARKETING" | "UTILITY" | "AUTHENTICATION"
@@ -77,9 +109,9 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
     setCategory(value);
     if (value === "AUTHENTICATION") {
       setComponents([]);
-      setAuthComponents([{ type: "body" }]);
+      setAuthComponents([{ type: "BODY" }]);
     } else {
-      setComponents([{ type: "body", text: "" }]);
+      setComponents([{ type: "BODY", text: "" }]);
       setAuthComponents([]);
     }
   };
@@ -93,29 +125,29 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
     );
   };
 
-  const addComponent = (type: "header" | "footer" | "buttons") => {
+  const addComponent = (type: "HEADER" | "FOOTER" | "BUTTONS") => {
     const hasComponent = components.some((c) => c.type === type);
     if (hasComponent) return;
 
     let newComponent: TemplateComponent;
 
     switch (type) {
-      case "header":
-        newComponent = { type: "header", format: "text", text: "" };
+      case "HEADER":
+        newComponent = { type: "HEADER", format: "TEXT", text: "" };
         // Add header to the beginning
         setComponents((prev) => [newComponent, ...prev]);
         break;
-      case "footer":
-        newComponent = { type: "footer", text: "" };
-        const bodyIndex = components.findIndex((c) => c.type === "body");
+      case "FOOTER":
+        newComponent = { type: "FOOTER", text: "" };
+        const bodyIndex = components.findIndex((c) => c.type === "BODY");
         setComponents((prev) => [
           ...prev.slice(0, bodyIndex + 1),
           newComponent,
           ...prev.slice(bodyIndex + 1),
         ]);
         break;
-      case "buttons":
-        newComponent = { type: "buttons", buttons: [] };
+      case "BUTTONS":
+        newComponent = { type: "BUTTONS", buttons: [] };
         setComponents((prev) => [...prev, newComponent]);
         break;
     }
@@ -123,7 +155,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
 
   const removeComponent = (index: number) => {
     const component = components[index];
-    if (!component || component.type === "body") return; // Body is required
+    if (!component || component.type === "BODY") return; // Body is required
     setComponents((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -143,40 +175,59 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
     }
 
     if (category === "AUTHENTICATION") {
-      if (!authComponents.some(c => c.type === 'body')) {
+      if (!authComponents.some(c => c.type === 'BODY')) {
         newErrors.auth_body = "Authentication templates must have a body component.";
       }
     } else {
-      const bodyComponent = components.find(c => c.type === 'body') as BodyComponent;
-      if (!bodyComponent || !bodyComponent.text) {
+      const bodyComponent = components.find(c => c.type === 'BODY') as BodyComponent;
+      if (!bodyComponent || !bodyComponent.text.trim()) {
         newErrors.body_0 = "Body text is required.";
       }
 
       components.forEach((component, index) => {
         switch (component.type) {
-          case "header":
-              if (component.format === "text" && component.text.length > 60) {
+          case "HEADER":
+            const headerComponent = component as HeaderComponent;
+            if (headerComponent.format === "TEXT") {
+              if (!headerComponent.text || !headerComponent.text.trim()) {
+                newErrors[`header_${index}`] = "Header text is required.";
+              } else if (headerComponent.text.length > 60) {
                 newErrors[`header_${index}`] = "Header text cannot exceed 60 characters.";
               }
-              break;
-          case "body":
-            if (component.text.length > 1024) {
+            } else if (headerComponent.format !== "LOCATION") {
+              // For image, video, document formats, check if media URL is provided
+              if (headerComponent.format === "IMAGE" || headerComponent.format === "VIDEO" || headerComponent.format === "DOCUMENT") {
+                const mediaComponent = headerComponent as any;
+                if (!mediaComponent.example?.header_handle?.[0] || !mediaComponent.example.header_handle[0].trim()) {
+                  newErrors[`header_${index}`] = "Media URL is required for this header type.";
+                }
+              }
+            }
+            break;
+          case "BODY":
+            if (!component.text || !component.text.trim()) {
+              newErrors[`body_${index}`] = "Body text is required.";
+            } else if (component.text.length > 1024) {
               newErrors[`body_${index}`] = "Body text cannot exceed 1024 characters.";
             }
             break;
-          case "footer":
-            if (component.text.length > 60) {
+          case "FOOTER":
+            const footerComponent = component as FooterComponent;
+            if (!footerComponent.text || !footerComponent.text.trim()) {
+              newErrors[`footer_${index}`] = "Footer text is required.";
+            } else if (footerComponent.text.length > 60) {
               newErrors[`footer_${index}`] = "Footer text cannot exceed 60 characters.";
             }
             break;
-          case "buttons":
-            if (component.buttons.length === 0) {
+          case "BUTTONS":
+            const buttonsComponent = component as ButtonsComponent;
+            if (buttonsComponent.buttons.length === 0) {
               newErrors[`buttons_${index}`] = "Add at least one button or remove the Buttons component.";
-            } else if (component.buttons.length > 10) {
+            } else if (buttonsComponent.buttons.length > 10) {
               newErrors[`buttons_${index}`] = "You can add a maximum of 10 buttons.";
             }
             
-            const buttonTypes = component.buttons.map(b => b.type === 'quick_reply' ? 'QR' : 'OTHER');
+            const buttonTypes = buttonsComponent.buttons.map(b => b.type === 'QUICK_REPLY' ? 'QR' : 'OTHER');
             let transitions = 0;
             for (let i = 1; i < buttonTypes.length; i++) {
               if (buttonTypes[i] !== buttonTypes[i - 1]) {
@@ -187,21 +238,23 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
               newErrors[`buttons_${index}`] = "Invalid button order. Quick Reply buttons must be grouped together.";
             }
             
-            component.buttons.forEach((button, btnIndex) => {
-              if ('text' in button && !button.text) {
-                newErrors[`button_${index}_${btnIndex}_text`] = "Button text is required.";
-              } else if ('text' in button && button.text.length > 25) {
-                newErrors[`button_${index}_${btnIndex}_text`] = "Button text cannot exceed 25 characters.";
+            buttonsComponent.buttons.forEach((button, btnIndex) => {
+              if ('text' in button) {
+                if (!button.text || !button.text.trim()) {
+                  newErrors[`button_${index}_${btnIndex}_text`] = "Button text is required.";
+                } else if (button.text.length > 25) {
+                  newErrors[`button_${index}_${btnIndex}_text`] = "Button text cannot exceed 25 characters.";
+                }
               }
 
-              if (button.type === "url") {
-                if (!button.url) {
+              if (button.type === "URL") {
+                if (!button.url || !button.url.trim()) {
                   newErrors[`button_${index}_${btnIndex}_url`] = "URL is required.";
                 } else if (button.url.length > 2000) {
                   newErrors[`button_${index}_${btnIndex}_url`] = "URL cannot exceed 2000 characters.";
                 }
-              } else if (button.type === "phone_number") {
-                if (!button.phone_number) {
+              } else if (button.type === "PHONE_NUMBER") {
+                if (!button.phone_number || !button.phone_number.trim()) {
                   newErrors[`button_${index}_${btnIndex}_phone`] = "Phone number is required.";
                 } else if (button.phone_number.length > 20) {
                   newErrors[`button_${index}_${btnIndex}_phone`] = "Phone number cannot exceed 20 characters.";
@@ -232,36 +285,111 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
     };
   }, [validate, isSubmittedOnce]);
 
+  const focusOnFirstError = (errors: Record<string, any>) => {
+    const errorKeys = Object.keys(errors);
+    if (errorKeys.length === 0) return;
+
+    // Map error keys to element IDs
+    const errorElementMap: Record<string, string> = {
+      name: 'template-name',
+      language: 'template-language',
+      body_0: 'body-textarea',
+    };
+
+    // Find the first error element to focus on
+    for (const errorKey of errorKeys) {
+      let elementId = errorElementMap[errorKey];
+      
+      if (!elementId) {
+        // Handle component-specific errors
+        if (errorKey.startsWith('header_')) {
+          const headerIndex = errorKey.split('_')[1];
+          elementId = `header-text-${headerIndex}`;
+        } else if (errorKey.startsWith('footer_')) {
+          const footerIndex = errorKey.split('_')[1];
+          elementId = `footer-text-${footerIndex}`;
+        } else if (errorKey.startsWith('buttons_')) {
+          const buttonsIndex = errorKey.split('_')[1];
+          elementId = `buttons-${buttonsIndex}`;
+        } else if (errorKey.startsWith('button_')) {
+          const parts = errorKey.split('_');
+          const componentIndex = parts[1];
+          const buttonIndex = parts[2];
+          const fieldType = parts[3];
+          elementId = `btn-${fieldType}-${buttonIndex}`;
+        }
+      }
+
+      if (elementId) {
+        const element = document.getElementById(elementId);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.focus();
+          break;
+        }
+      }
+    }
+  };
+
   const handleSubmit = () => {
     setIsSubmittedOnce(true);
     const newErrors = validate();
-    const isValid = Object.keys(newErrors).length === 0;
+    const isFormValid = Object.keys(newErrors).length === 0;
     setErrors(newErrors);
 
-    if (!isValid) {
+    if (!isFormValid) {
+      // Show toast notification
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Please fill in all required fields before creating the template.",
+      });
+
+      // Focus on the first error element
+      focusOnFirstError(newErrors);
       return;
     }
 
-    if (category === "MARKETING" || category === "UTILITY") {
-      const body = components.find((c) => c.type === "body") as BodyComponent;
-      if (!body || !body.text) {
-        // This case is handled by validateComponents, but as a fallback:
-        alert("Body text is required.");
-        return;
-      }
-    }
-
+    // Create payload based on category
+    let payload: CreateTemplatePayload;
     switch (category) {
       case "MARKETING":
-        onSubmit({ name, language, category, components });
+        payload = { name, language, category, components };
         break;
       case "UTILITY":
-        onSubmit({ name, language, category, components });
+        payload = { name, language, category, components };
         break;
       case "AUTHENTICATION":
-        onSubmit({ name, language, category, components: authComponents });
+        payload = { name, language, category, components: authComponents };
         break;
+      default:
+        toast({
+          variant: "destructive",
+          title: "Validation Error",
+          description: "Invalid template category.",
+        });
+        return;
     }
+
+    // Validate with Meta requirements
+    const metaValidation = validateTemplate(payload);
+    
+    if (!metaValidation.isValid) {
+      // Show Meta validation errors
+      toast({
+        variant: "destructive",
+        title: "Template Validation Failed",
+        description: "Please fix the following issues before creating the template:",
+        duration: 10000,
+      });
+      
+      // Focus on the first error element
+      focusOnFirstError(newErrors);
+      return;
+    }
+
+    // If validation passes, submit the template
+    onSubmit(payload);
   };
 
   const handleAuthFormChange = useCallback((newAuthComponents: AuthTemplateComponent[], isValid: boolean) => {
@@ -336,6 +464,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                     maxLength={1024}
                     value={component.text}
                     onChange={e => handleBodyChange(e.target.value)}
+                    disabled={isLoading}
                 />
                 <p className="text-sm text-muted-foreground mt-1">Max length: {component.text.length}/1024 characters</p>
                 {errors[`body_${index}`] && <p className="text-sm text-destructive mt-1">{errors[`body_${index}`]}</p>}
@@ -353,6 +482,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                                     placeholder={`Example for {{${example.param_name}}}`}
                                     value={example.example || ''}
                                     onChange={e => handleExampleChange(example.param_name, e.target.value)}
+                                    disabled={isLoading}
                                 />
                             </div>
                         ))}
@@ -381,11 +511,13 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
       </CardHeader>
       <CardContent>
         <Input
+          id={`footer-text-${index}`}
           placeholder="Enter footer text"
           value={component.text}
           onChange={(e) =>
             updateComponent(index, { ...component, text: e.target.value })
           }
+          disabled={isLoading}
         />
         {errors[`footer_${index}`] && <p className="text-sm text-destructive mt-1">{errors[`footer_${index}`]}</p>}
       </CardContent>
@@ -399,10 +531,10 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
 
     const addButton = (type: TemplateButton["type"]) => {
       let newButton: TemplateButton;
-      if (type === "url") newButton = { type: "url", text: "", url: "" };
-      else if (type === "phone_number")
-        newButton = { type: "phone_number", text: "", phone_number: "" };
-      else newButton = { type: "quick_reply", text: "" };
+      if (type === "URL") newButton = { type: "URL", text: "", url: "" };
+      else if (type === "PHONE_NUMBER")
+        newButton = { type: "PHONE_NUMBER", text: "", phone_number: "" };
+      else newButton = { type: "QUICK_REPLY", text: "" };
       updateButtons([...component.buttons, newButton]);
     };
 
@@ -429,20 +561,20 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
     };
 
     const hasQuickReply = component.buttons.some(
-      (b) => b.type === "quick_reply"
+      (b) => b.type === "QUICK_REPLY"
     );
-    const hasUrl = component.buttons.some((b) => b.type === "url");
-    const hasPhone = component.buttons.some((b) => b.type === "phone_number");
+    const hasUrl = component.buttons.some((b) => b.type === "URL");
+    const hasPhone = component.buttons.some((b) => b.type === "PHONE_NUMBER");
     const quickReplyCount = component.buttons.filter(
-      (b) => b.type === "quick_reply"
+      (b) => b.type === "QUICK_REPLY"
     ).length;
-    const urlCount = component.buttons.filter((b) => b.type === "url").length;
+    const urlCount = component.buttons.filter((b) => b.type === "URL").length;
     const phoneCount = component.buttons.filter(
-      (b) => b.type === "phone_number"
+      (b) => b.type === "PHONE_NUMBER"
     ).length;
 
     return (
-      <Card key={pIndex}>
+      <Card key={pIndex} id={`buttons-${pIndex}`}>
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle>Buttons</CardTitle>
@@ -456,19 +588,19 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                   <DropdownMenuItem
-                    onClick={() => addButton("quick_reply")}
+                    onClick={() => addButton("QUICK_REPLY")}
                     disabled={quickReplyCount >= 10 || component.buttons.length >= 10}
                   >
                     Quick Reply
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => addButton("url")}
+                    onClick={() => addButton("URL")}
                     disabled={urlCount >= 2 || component.buttons.length >= 10}
                   >
                     Visit Website
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => addButton("phone_number")}
+                    onClick={() => addButton("PHONE_NUMBER")}
                     disabled={phoneCount >= 1 || component.buttons.length >= 10}
                   >
                     Call Phone Number
@@ -494,19 +626,19 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
 
             const disableQuickReply =
               otherButtons.some(
-                (b) => b.type === "url" || b.type === "phone_number"
+                (b) => b.type === "URL" || b.type === "PHONE_NUMBER"
               ) ||
-              (component.buttons.filter((b) => b.type === "quick_reply")
+              (component.buttons.filter((b) => b.type === "QUICK_REPLY")
                 .length >= 3 &&
-                button.type !== "quick_reply");
+                button.type !== "QUICK_REPLY");
 
             const disableUrl =
-              otherButtons.some((b) => b.type === "quick_reply") ||
-              otherButtons.some((b) => b.type === "url");
+              otherButtons.some((b) => b.type === "QUICK_REPLY") ||
+              otherButtons.some((b) => b.type === "URL");
 
             const disablePhone =
-              otherButtons.some((b) => b.type === "quick_reply") ||
-              otherButtons.some((b) => b.type === "phone_number");
+              otherButtons.some((b) => b.type === "QUICK_REPLY") ||
+              otherButtons.some((b) => b.type === "PHONE_NUMBER");
 
             return (
               <Card key={index} className="p-4">
@@ -544,15 +676,15 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                         <Label htmlFor={`btn-type-${index}`}>Button Type</Label>
                         <Select value={button.type} onValueChange={(value) => {
                            const currentText = 'text' in button ? (button as any).text : '';
-                           if (value === 'url') updateButton(index, { type: 'url', text: currentText, url: '' });
-                           else if (value === 'phone_number') updateButton(index, { type: 'phone_number', text: currentText, phone_number: '' });
-                           else if (value === 'quick_reply') updateButton(index, { type: 'quick_reply', text: currentText });
+                           if (value === 'URL') updateButton(index, { type: 'URL', text: currentText, url: '' });
+                           else if (value === 'PHONE_NUMBER') updateButton(index, { type: 'PHONE_NUMBER', text: currentText, phone_number: '' });
+                           else if (value === 'QUICK_REPLY') updateButton(index, { type: 'QUICK_REPLY', text: currentText });
                         }}>
                            <SelectTrigger id={`btn-type-${index}`}><SelectValue/></SelectTrigger>
                            <SelectContent>
-                               <SelectItem value="quick_reply" disabled={disableQuickReply}>Quick Reply</SelectItem>
-                               <SelectItem value="url" disabled={disableUrl}>Visit Website (URL)</SelectItem>
-                               <SelectItem value="phone_number" disabled={disablePhone}>Call Phone Number</SelectItem>
+                               <SelectItem value="QUICK_REPLY" disabled={disableQuickReply}>Quick Reply</SelectItem>
+                               <SelectItem value="URL" disabled={disableUrl}>Visit Website (URL)</SelectItem>
+                               <SelectItem value="PHONE_NUMBER" disabled={disablePhone}>Call Phone Number</SelectItem>
                            </SelectContent>
                         </Select>
                     </div>
@@ -566,7 +698,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                     )}
                 </div>
                 
-                {button.type === 'url' && (() => {
+                {button.type === 'URL' && (() => {
                     const isDynamic = button.url.endsWith('{{1}}');
                     const baseUrl = isDynamic ? button.url.slice(0, -5) : button.url;
 
@@ -648,7 +780,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                     );
                   })()}
 
-                {button.type === 'phone_number' && (
+                {button.type === 'PHONE_NUMBER' && (
                     <div className="mt-4 space-y-2">
                         <Label>Phone Number</Label>
                         <Input placeholder="Enter a valid phone number" value={button.phone_number} onChange={e => updateButton(index, {...button, phone_number: e.target.value})} />
@@ -665,7 +797,16 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
 
   return (
     <div className="p-4 sm:p-8">
-      <Card className="max-w-4xl mx-auto">
+      <Card className="max-w-4xl mx-auto relative">
+        {isLoading && (
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center">
+            <div className="flex flex-col items-center gap-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-lg font-medium">Creating Template...</p>
+              <p className="text-sm text-muted-foreground">Please wait while we process your template</p>
+            </div>
+          </div>
+        )}
         <CardHeader>
           <CardTitle>Create New Template</CardTitle>
           <CardDescription>
@@ -682,6 +823,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                 placeholder="e.g. order_confirmation"
                 value={name}
                 onChange={(e) => setName(e.target.value.replace(/[^a-z0-9_]/g, ""))}
+                disabled={isLoading}
               />
               <p className="text-sm text-muted-foreground">
                 Lowercase letters, numbers, and underscores only.
@@ -691,7 +833,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="template-language">Language</Label>
-                <Select value={language} onValueChange={setLanguage}>
+                <Select value={language} onValueChange={setLanguage} disabled={isLoading}>
                   <SelectTrigger id="template-language">
                     <SelectValue placeholder="Select a language" />
                   </SelectTrigger>
@@ -707,7 +849,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="template-category">Category</Label>
-                <Select value={category} onValueChange={handleCategoryChange}>
+                <Select value={category} onValueChange={handleCategoryChange} disabled={isLoading}>
                   <SelectTrigger id="template-category">
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
@@ -725,25 +867,65 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
 
           <Separator />
 
+          {/* Meta Validation Alert - Only show user-facing errors */}
+          {(userErrors.length > 0 || userWarnings.length > 0) && (
+            <Alert variant={userErrors.length > 0 ? "destructive" : "default"}>
+              {userErrors.length > 0 ? (
+                <AlertTriangle className="h-4 w-4" />
+              ) : (
+                <Info className="h-4 w-4" />
+              )}
+              <AlertDescription>
+                <div className="space-y-2">
+                  <div className="font-semibold">
+                    {userErrors.length > 0 ? "Please fix the following issues:" : "Template suggestions:"}
+                  </div>
+                  <div className="space-y-1">
+                    {userErrors.map((error, index) => (
+                      <div key={index} className="text-sm">
+                        • {error.message}
+                      </div>
+                    ))}
+                    {userWarnings.map((warning, index) => (
+                      <div key={index} className="text-sm">
+                        • {warning.message}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Success Message */}
+          {isValid && userErrors.length === 0 && userWarnings.length === 0 && (name || language || category !== "MARKETING") && (
+            <Alert>
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription>
+                Template structure looks good! Ready to create.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {category !== "AUTHENTICATION" ? (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <h3 className="text-xl font-semibold">Components</h3>
                 <div className="flex items-center gap-2">
-                  {!components.some((c) => c.type === "header") && (
-                    <Button variant="outline" onClick={() => addComponent("header")}>
+                  {!components.some((c) => c.type === "HEADER") && (
+                    <Button variant="outline" onClick={() => addComponent("HEADER")} disabled={isLoading}>
                       <PlusCircle className="h-4 w-4 mr-2" />
                       Add Header
                     </Button>
                   )}
-                  {!components.some((c) => c.type === "footer") && (
-                    <Button variant="outline" onClick={() => addComponent("footer")}>
+                  {!components.some((c) => c.type === "FOOTER") && (
+                    <Button variant="outline" onClick={() => addComponent("FOOTER")} disabled={isLoading}>
                       <PlusCircle className="h-4 w-4 mr-2" />
                       Add Footer
                     </Button>
                   )}
-                  {!components.some((c) => c.type === "buttons") && (
-                    <Button variant="outline" onClick={() => addComponent("buttons")}>
+                  {!components.some((c) => c.type === "BUTTONS") && (
+                    <Button variant="outline" onClick={() => addComponent("BUTTONS")} disabled={isLoading}>
                       <PlusCircle className="h-4 w-4 mr-2" />
                       Add Buttons
                     </Button>
@@ -754,13 +936,13 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
               <div className="space-y-4">
                 {components.map((component, index) => {
                   switch (component.type) {
-                    case "header":
+                    case "HEADER":
                       return <HeaderComponentEditor key={index} component={component as HeaderComponent} index={index} updateComponent={updateComponent} removeComponent={removeComponent} onFileUpload={onFileUpload} errors={errors} />;
-                    case "body":
+                    case "BODY":
                       return renderBody(component as BodyComponent, index);
-                    case "footer":
+                    case "FOOTER":
                       return renderFooter(component as FooterComponent, index);
-                    case "buttons":
+                    case "BUTTONS":
                       return renderButtons(
                         component as ButtonsComponent,
                         index
@@ -776,11 +958,22 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
           )}
         </CardContent>
         <CardFooter className="flex justify-end gap-4">
-          <Button variant="outline" onClick={onCancel}>
+          <Button variant="outline" onClick={onCancel} disabled={isLoading}>
             Cancel
           </Button>
-          <Button variant="success" onClick={handleSubmit} disabled={!isFormValid}>
-            Create Template
+          <Button 
+            variant="success" 
+            onClick={handleSubmit} 
+            disabled={userErrors.length > 0 || isLoading}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating Template...
+              </>
+            ) : (
+              "Create Template"
+            )}
           </Button>
         </CardFooter>
       </Card>
@@ -789,3 +982,5 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
 };
 
 export default CreateTemplateUI;
+
+

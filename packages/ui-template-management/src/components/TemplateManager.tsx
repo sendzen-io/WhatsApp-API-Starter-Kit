@@ -97,6 +97,7 @@ interface TemplateManagerProps {
   errorDetails?: ErrorDetails;
   dictionary?: TemplateManagerDictionary;
   deletingTemplateId?: string | null;
+  creatingTemplate?: boolean;
   currentFilter: "all" | "approved" | "pending" | "rejected";
   onRetry: () => void;
   onSync: () => void;
@@ -446,7 +447,7 @@ function TemplateCard({
                     align="end"
                     className="w-48 template-action-menu"
                   >
-                    <DropdownMenuItem
+                    {/* <DropdownMenuItem
                       onClick={handlePreviewTemplate}
                       className="template-action-preview"
                     >
@@ -459,7 +460,7 @@ function TemplateCard({
                     >
                       <Edit3 className="mr-2 h-4 w-4" />
                       {dict.templates.edit_template}
-                    </DropdownMenuItem>
+                    </DropdownMenuItem> */}
                     <DropdownMenuItem
                       onClick={handleCopyTemplate}
                       className="template-action-copy"
@@ -619,6 +620,7 @@ const TemplateManager: React.FC<TemplateManagerProps> = ({
   errorDetails,
   dictionary: providedDictionary,
   deletingTemplateId,
+  creatingTemplate = false,
   currentFilter,
   totalTemplates,
   onRetry,
@@ -656,6 +658,7 @@ const TemplateManager: React.FC<TemplateManagerProps> = ({
         onSubmit={handleCreateTemplate}
         dictionary={dict}
         onFileUpload={onFileUpload}
+        isLoading={creatingTemplate}
       />
     );
   }

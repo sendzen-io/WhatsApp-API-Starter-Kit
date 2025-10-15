@@ -38,7 +38,7 @@ type AppErrors = {
 }
 
 const AuthenticationTemplateForm: React.FC<AuthenticationTemplateFormProps> = ({ onChange }) => {
-    const [body, setBody] = useState<AuthBodyComponent>({ type: 'body', add_security_recommendation: false });
+    const [body, setBody] = useState<AuthBodyComponent>({ type: 'BODY', add_security_recommendation: false });
     const [footer, setFooter] = useState<AuthFooterComponent | null>(null);
     const [buttons, setButtons] = useState<AuthButtonsComponent | null>(null);
     const [appErrors, setAppErrors] = useState<AppErrors[][]>([]);
@@ -62,14 +62,14 @@ const AuthenticationTemplateForm: React.FC<AuthenticationTemplateFormProps> = ({
         let newButton: AuthOtpButton;
         switch (otp_type) {
             case 'one_tap':
-                newButton = { type: 'otp', otp_type: 'one_tap', supported_apps: [] };
+                newButton = { type: 'OTP', otp_type: 'one_tap', supported_apps: [] };
                 break;
             case 'zero_tap':
-                newButton = { type: 'otp', otp_type: 'zero_tap', zero_tap_terms_accepted: false, supported_apps: [] };
+                newButton = { type: 'OTP', otp_type: 'zero_tap', zero_tap_terms_accepted: false, supported_apps: [] };
                 break;
             case 'copy_code':
             default:
-                newButton = { type: 'otp', otp_type: 'copy_code' };
+                newButton = { type: 'OTP', otp_type: 'copy_code', text: 'Copy Code' };
                 break;
         }
         if (buttons) {
@@ -103,13 +103,13 @@ const AuthenticationTemplateForm: React.FC<AuthenticationTemplateFormProps> = ({
 
         switch(newType) {
             case 'copy_code':
-                newButton = { type: 'otp', otp_type: 'copy_code', text: 'Copy Code' };
+                newButton = { type: 'OTP', otp_type: 'copy_code', text: 'Copy Code' };
                 break;
             case 'one_tap':
-                newButton = { type: 'otp', otp_type: 'one_tap', text, autofill_text, supported_apps };
+                newButton = { type: 'OTP', otp_type: 'one_tap', text, autofill_text, supported_apps };
                 break;
             case 'zero_tap':
-                newButton = { type: 'otp', otp_type: 'zero_tap', text, autofill_text, supported_apps, zero_tap_terms_accepted };
+                newButton = { type: 'OTP', otp_type: 'zero_tap', text, autofill_text, supported_apps, zero_tap_terms_accepted };
                 break;
         }
         updateAuthButton(index, newButton);
@@ -140,7 +140,7 @@ const AuthenticationTemplateForm: React.FC<AuthenticationTemplateFormProps> = ({
                     <div className="flex justify-between items-center">
                         <CardTitle>Footer</CardTitle>
                         {!footer ? (
-                           <Button variant="outline" size="sm" onClick={() => setFooter({ type: 'footer' })}><PlusCircle className="h-4 w-4 mr-2"/>Add Footer</Button>
+                            <Button variant="outline" size="sm" onClick={() => setFooter({ type: 'FOOTER' })}><PlusCircle className="h-4 w-4 mr-2"/>Add Footer</Button>
                         ) : (
                            <Button variant="ghost" size="sm" onClick={() => setFooter(null)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
                         )}
@@ -164,7 +164,7 @@ const AuthenticationTemplateForm: React.FC<AuthenticationTemplateFormProps> = ({
                      <div className="flex justify-between items-center">
                         <CardTitle>OTP Buttons</CardTitle>
                         {!buttons ? (
-                            <Button variant="outline" size="sm" onClick={() => setButtons({ type: 'buttons', buttons: [] })}><PlusCircle className="h-4 w-4 mr-2"/>Add Buttons</Button>
+                            <Button variant="outline" size="sm" onClick={() => setButtons({ type: 'BUTTONS', buttons: [] })}><PlusCircle className="h-4 w-4 mr-2"/>Add Buttons</Button>
                         ) : (
                              <Button variant="ghost" size="sm" onClick={() => setButtons(null)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
                         )}

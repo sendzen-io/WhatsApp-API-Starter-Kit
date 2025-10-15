@@ -9,6 +9,12 @@ import { Label } from '@workspace/ui-core/components/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@workspace/ui-core/components/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@workspace/ui-core/components/tabs';
 import { Trash2, Loader2 } from 'lucide-react';
+import { MetaFileUploadService } from '../lib/metaFileUploadService';
+import FilePreview from './FilePreview';
+
+// Meta API Configuration - These should be passed as props or from environment
+const META_APP_ID = "413460000639062"; // Replace with your actual Meta App ID
+const META_ACCESS_TOKEN = "EAAF4Cih3iFYBPvdZCy7FXe0LXiwxAy6mrbowld7SZBM4EQTYPEoTUohZBg0T5d7H7PeombfIaVTR169kJiL4s9AbZA8qwVaIt3AnheWZBNnubK5JurZBQePddIoaeHnfKlWpKIFRIKx0DV63CXhTBaigYzttEZCnsgpNnbDuwX8ZBTMZAXpIFU3aHbWMTygVNzd4Bc4TlM4ET8pvEBtoxbDgkd4oEmpZCTz3Il6kdhV8vKbqhKwQZDZD"; // Replace with your actual access token
 
 const MEDIA_CONSTRAINTS = {
     image: {
@@ -46,31 +52,44 @@ const HeaderComponentEditor: React.FC<HeaderComponentEditorProps> = ({
 }) => {
     const [isUploading, setIsUploading] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
+    const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+    const [uploadedFileId, setUploadedFileId] = useState<string | null>(null);
 
-    const handleFormatChange = (value: 'text' | 'image' | 'video' | 'document' | 'location') => {
-        if (value === 'text') {
-            updateComponent(index, { type: 'header', format: 'text', text: '' });
-        } else if (value === 'location') {
-            updateComponent(index, { type: 'header', format: 'location' });
+    const handleFormatChange = (value: 'TEXT' | 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'LOCATION') => {
+        // Reset uploaded file state when changing header type
+        setUploadedFile(null);
+        setUploadedFileId(null);
+        setUploadError(null);
+        
+        // Clear the file input
+        const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+        if (fileInput) {
+            fileInput.value = '';
+        }
+        
+        if (value === 'TEXT') {
+            updateComponent(index, { type: 'HEADER', format: 'TEXT', text: '' });
+        } else if (value === 'LOCATION') {
+            updateComponent(index, { type: 'HEADER', format: 'LOCATION' });
         } else {
-            updateComponent(index, { type: 'header', format: value, example: { header_handle: [''] } });
+            updateComponent(index, { type: 'HEADER', format: value, example: { header_handle: [''] } });
         }
     };
 
     const handleTextChange = (newText: string) => {
         const hasVariable = newText.includes('{{1}}');
         const example = hasVariable ? { header_text: [''] } : undefined;
-        updateComponent(index, { type: 'header', format: 'text', text: newText, example });
+        updateComponent(index, { type: 'HEADER', format: 'TEXT', text: newText, example });
     };
 
     const handleExampleChange = (value: string) => {
-        if (component.format === 'text') {
+        if (component.format === 'TEXT') {
             updateComponent(index, { ...component, example: { header_text: [value] } });
         }
     };
 
     const handleMediaExampleChange = (value: string) => {
-        if (component.format !== 'text' && component.format !== 'location') {
+        if (component.format !== 'TEXT' && component.format !== 'LOCATION') {
             updateComponent(index, { ...component, example: { header_handle: [value] } } as any);
         }
     };
@@ -79,31 +98,53 @@ const HeaderComponentEditor: React.FC<HeaderComponentEditorProps> = ({
         const file = event.target.files?.[0];
         setUploadError(null);
 
-        if (file && onFileUpload) {
-            const format = component.format as 'image' | 'video' | 'document';
-            const constraints = MEDIA_CONSTRAINTS[format];
-
-            if (!constraints.types.includes(file.type)) {
-                setUploadError(`Invalid file type. Please select a valid ${format}.`);
+        if (file) {
+            // Validate file using the Meta upload service
+            const validation = MetaFileUploadService.validateFile(file);
+            if (!validation.isValid) {
+                setUploadError(validation.error || 'Invalid file');
                 return;
             }
 
-            if (file.size > constraints.maxSize) {
-                setUploadError(`File is too large. Max size is ${constraints.maxSize / 1024 / 1024}MB.`);
-                return;
-            }
-            
             setIsUploading(true);
             try {
-                const url = await onFileUpload(file);
-                handleMediaExampleChange(url);
+                // Create Meta upload service instance
+                const metaUploadService = new MetaFileUploadService(META_APP_ID, META_ACCESS_TOKEN);
+                
+                // Upload file using Meta's Resumable Upload API
+                const result = await metaUploadService.uploadFile(file);
+                
+                if (result.success && result.fileHandle) {
+                    // Store the uploaded file and file handle for preview
+                    setUploadedFile(file);
+                    setUploadedFileId(result.fileHandle);
+                    // Use the file handle as the URL for the template
+                    handleMediaExampleChange(result.fileHandle);
+                    
+                    console.log("File uploaded successfully via Meta API:", result.fileHandle);
+                } else {
+                    setUploadError(result.error || 'File upload failed. Please try again.');
+                }
             } catch (error) {
-                console.error("File upload failed:", error);
+                console.error("Meta API file upload failed:", error);
                 setUploadError("File upload failed. Please try again.");
             } finally {
                 setIsUploading(false);
             }
         }
+    };
+
+    const handleFileRemove = () => {
+        setUploadedFile(null);
+        setUploadedFileId(null);
+        setUploadError(null);
+        // Clear the file input
+        const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+        if (fileInput) {
+            fileInput.value = '';
+        }
+        // Clear the media example
+        handleMediaExampleChange('');
     };
     
     return (
@@ -122,17 +163,17 @@ const HeaderComponentEditor: React.FC<HeaderComponentEditorProps> = ({
                         <Select value={component.format} onValueChange={handleFormatChange}>
                             <SelectTrigger><SelectValue/></SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="text">Text</SelectItem>
-                                <SelectItem value="image">Image</SelectItem>
-                                <SelectItem value="video">Video</SelectItem>
-                                <SelectItem value="document">Document</SelectItem>
-                                <SelectItem value="location">Location</SelectItem>
+                                <SelectItem value="TEXT">Text</SelectItem>
+                                <SelectItem value="IMAGE">Image</SelectItem>
+                                <SelectItem value="VIDEO">Video</SelectItem>
+                                <SelectItem value="DOCUMENT">Document</SelectItem>
+                                <SelectItem value="LOCATION">Location</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
                 </div>
 
-                {component.format === 'text' && (
+                {component.format === 'TEXT' && (
                     <div className="space-y-4 pt-4 border-t">
                         <div className="space-y-2">
                             <Label htmlFor={`header-text-${index}`}>Header Text</Label>
@@ -148,23 +189,58 @@ const HeaderComponentEditor: React.FC<HeaderComponentEditorProps> = ({
                         )}
                     </div>
                 )}
-                {(component.format === 'image' || component.format === 'video' || component.format === 'document') && (
-                     <div className="space-y-2 pt-4 border-t">
+                {(component.format === 'IMAGE' || component.format === 'VIDEO' || component.format === 'DOCUMENT') && (
+                     <div className="space-y-4 pt-4 border-t">
                         <Label>Media Source</Label>
-                        <div className="pt-4 space-y-2">
+                        
+                        {/* File Upload Section */}
+                        <div className="space-y-2">
                             <Label htmlFor="file-upload">Upload File</Label>
                             <div className="flex items-center gap-2">
-                                <Input id="file-upload" type="file" onChange={handleFileChange} disabled={isUploading || !onFileUpload} accept={MEDIA_CONSTRAINTS[component.format as 'image'|'video'|'document'].types.join(',')} />
+                                <Input 
+                                    id="file-upload" 
+                                    type="file" 
+                                    onChange={handleFileChange} 
+                                    disabled={isUploading} 
+                                    accept={MEDIA_CONSTRAINTS[component.format.toLowerCase() as 'image'|'video'|'document'].types.join(',')} 
+                                />
                                 {isUploading && <Loader2 className="h-5 w-5 animate-spin" />}
                             </div>
-                            {!onFileUpload && <p className="text-sm text-yellow-600 mt-2">File upload is not configured.</p>}
                             <p className="text-sm text-muted-foreground">
-                                Max size: {MEDIA_CONSTRAINTS[component.format as 'image'|'video'|'document'].maxSize / 1024 / 1024}MB.
-                                Supported types: {MEDIA_CONSTRAINTS[component.format as 'image'|'video'|'document'].types.map(t => t.split('/')[1]).join(', ')}
+                                Max size: {MEDIA_CONSTRAINTS[component.format.toLowerCase() as 'image'|'video'|'document'].maxSize / 1024 / 1024}MB.
+                                Supported types: {MEDIA_CONSTRAINTS[component.format.toLowerCase() as 'image'|'video'|'document'].types.map(t => t.split('/')[1]).join(', ')}
                             </p>
                             {uploadError && <p className="text-sm text-destructive mt-2">{uploadError}</p>}
-                            {component.example?.header_handle?.[0] && !isUploading && !uploadError && <p className="text-sm text-muted-foreground mt-2">Current URL: {component.example.header_handle[0]}</p>}
                         </div>
+
+                        {/* File Preview Section */}
+                        {uploadedFile && (
+                            <div className="space-y-2">
+                                <Label className='py-3'>File Preview</Label>
+                                <FilePreview 
+                                    file={uploadedFile}
+                                    fileId={uploadedFileId || undefined}
+                                    onRemove={handleFileRemove}
+                                />
+                            </div>
+                        )}
+
+                        {/* Current URL Display (for non-uploaded files) */}
+                        {component.example?.header_handle?.[0] && !uploadedFile && !isUploading && !uploadError && (
+                            <div className="space-y-2">
+                                <Label>Current Media URL</Label>
+                                <div className="p-3 bg-gray-50 rounded-md">
+                                    <p className="text-sm text-muted-foreground break-all">
+                                        {component.example.header_handle[0]}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                        
+                        {/* Media URL validation error */}
+                        {errors && errors[`header_${index}`] && (
+                            <p className="text-sm text-destructive mt-2">{errors[`header_${index}`]}</p>
+                        )}
                     </div>
                 )}
             </CardContent>
