@@ -50,7 +50,7 @@ import { AlertTriangle, CheckCircle, Info } from "lucide-react";
 interface CreateTemplateUIProps {
   onCancel: () => void;
   onSubmit: (template: CreateTemplatePayload) => void;
-  dictionary?: any; // Add a proper dictionary type later
+  dictionary?: any; // Will be properly typed when passed from TemplateManager
   onFileUpload?: (file: File) => Promise<string>;
   isLoading?: boolean;
 }
@@ -62,6 +62,53 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
   onFileUpload,
   isLoading = false,
 }) => {
+  // Use dictionary with fallback to English text
+  const dict = dictionary?.createTemplate || {
+    title: "Create New Template",
+    description: "Fill in the details to create a new message template.",
+    templateName: "Template Name",
+    templateNamePlaceholder: "e.g. order_confirmation",
+    templateNameHelp: "Lowercase letters, numbers, and underscores only.",
+    language: "Language",
+    languagePlaceholder: "Select a language",
+    category: "Category",
+    categoryPlaceholder: "Select a category",
+    categories: {
+      marketing: "Marketing",
+      utility: "Utility",
+      authentication: "Authentication",
+    },
+    components: "Components",
+    addHeader: "Add Header",
+    addFooter: "Add Footer",
+    addButtons: "Add Buttons",
+    body: "Body",
+    footer: "Footer",
+    buttons: "Buttons",
+    buttonText: "Button Text",
+    buttonTextPlaceholder: "Enter button text",
+    buttonUrl: "URL",
+    buttonUrlPlaceholder: "https://example.com",
+    buttonPhone: "Phone Number",
+    buttonPhonePlaceholder: "+1234567890",
+    removeComponent: "Remove",
+    validation: {
+      pleaseFixIssues: "Please fix the following issues:",
+      templateSuggestions: "Template suggestions:",
+      templateStructureGood: "Template structure looks good! Ready to create.",
+      validationError: "Validation Error",
+      fillRequiredFields: "Please fill in all required fields before creating the template.",
+      invalidCategory: "Invalid template category.",
+      templateValidationFailed: "Template Validation Failed",
+      fixIssuesBeforeCreating: "Please fix the following issues before creating the template:",
+    },
+    loading: {
+      creatingTemplate: "Creating Template...",
+      pleaseWait: "Please wait while we process your template",
+    },
+    cancel: "Cancel",
+    createTemplate: "Create Template",
+  };
   const [name, setName] = useState("");
   const [language, setLanguage] = useState("");
   const [category, setCategory] = useState<
@@ -341,8 +388,8 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
       // Show toast notification
       toast({
         variant: "destructive",
-        title: "Validation Error",
-        description: "Please fill in all required fields before creating the template.",
+        title: dict.validation.validationError,
+        description: dict.validation.fillRequiredFields,
       });
 
       // Focus on the first error element
@@ -365,8 +412,8 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
       default:
         toast({
           variant: "destructive",
-          title: "Validation Error",
-          description: "Invalid template category.",
+          title: dict.validation.validationError,
+          description: dict.validation.invalidCategory,
         });
         return;
     }
@@ -378,8 +425,8 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
       // Show Meta validation errors
       toast({
         variant: "destructive",
-        title: "Template Validation Failed",
-        description: "Please fix the following issues before creating the template:",
+        title: dict.validation.templateValidationFailed,
+        description: dict.validation.fixIssuesBeforeCreating,
         duration: 10000,
       });
       
@@ -802,40 +849,40 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
           <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center">
             <div className="flex flex-col items-center gap-4">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-lg font-medium">Creating Template...</p>
-              <p className="text-sm text-muted-foreground">Please wait while we process your template</p>
+              <p className="text-lg font-medium">{dict.loading.creatingTemplate}</p>
+              <p className="text-sm text-muted-foreground">{dict.loading.pleaseWait}</p>
             </div>
           </div>
         )}
         <CardHeader>
-          <CardTitle>Create New Template</CardTitle>
+          <CardTitle>{dict.title}</CardTitle>
           <CardDescription>
-            Fill in the details to create a new message template.
+            {dict.description}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
           {/* Basic Info */}
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="template-name">Template Name</Label>
+              <Label htmlFor="template-name">{dict.templateName}</Label>
               <Input
                 id="template-name"
-                placeholder="e.g. order_confirmation"
+                placeholder={dict.templateNamePlaceholder}
                 value={name}
                 onChange={(e) => setName(e.target.value.replace(/[^a-z0-9_]/g, ""))}
                 disabled={isLoading}
               />
               <p className="text-sm text-muted-foreground">
-                Lowercase letters, numbers, and underscores only.
+                {dict.templateNameHelp}
               </p>
               {errors.name && <p className="text-sm text-destructive mt-1">{errors.name}</p>}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="template-language">Language</Label>
+                <Label htmlFor="template-language">{dict.language}</Label>
                 <Select value={language} onValueChange={setLanguage} disabled={isLoading}>
                   <SelectTrigger id="template-language">
-                    <SelectValue placeholder="Select a language" />
+                    <SelectValue placeholder={dict.languagePlaceholder} />
                   </SelectTrigger>
                   <SelectContent>
                     {SUPPORTED_LANGUAGES.map((lang) => (
@@ -848,16 +895,16 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                 {errors.language && <p className="text-sm text-destructive mt-1">{errors.language}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="template-category">Category</Label>
+                <Label htmlFor="template-category">{dict.category}</Label>
                 <Select value={category} onValueChange={handleCategoryChange} disabled={isLoading}>
                   <SelectTrigger id="template-category">
-                    <SelectValue placeholder="Select a category" />
+                    <SelectValue placeholder={dict.categoryPlaceholder} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="MARKETING">Marketing</SelectItem>
-                    <SelectItem value="UTILITY">Utility</SelectItem>
+                    <SelectItem value="MARKETING">{dict.categories.marketing}</SelectItem>
+                    <SelectItem value="UTILITY">{dict.categories.utility}</SelectItem>
                     <SelectItem value="AUTHENTICATION">
-                      Authentication
+                      {dict.categories.authentication}
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -867,67 +914,27 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
 
           <Separator />
 
-          {/* Meta Validation Alert - Only show user-facing errors */}
-          {(userErrors.length > 0 || userWarnings.length > 0) && (
-            <Alert variant={userErrors.length > 0 ? "destructive" : "default"}>
-              {userErrors.length > 0 ? (
-                <AlertTriangle className="h-4 w-4" />
-              ) : (
-                <Info className="h-4 w-4" />
-              )}
-              <AlertDescription>
-                <div className="space-y-2">
-                  <div className="font-semibold">
-                    {userErrors.length > 0 ? "Please fix the following issues:" : "Template suggestions:"}
-                  </div>
-                  <div className="space-y-1">
-                    {userErrors.map((error, index) => (
-                      <div key={index} className="text-sm">
-                        • {error.message}
-                      </div>
-                    ))}
-                    {userWarnings.map((warning, index) => (
-                      <div key={index} className="text-sm">
-                        • {warning.message}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Success Message */}
-          {isValid && userErrors.length === 0 && userWarnings.length === 0 && (name || language || category !== "MARKETING") && (
-            <Alert>
-              <CheckCircle className="h-4 w-4" />
-              <AlertDescription>
-                Template structure looks good! Ready to create.
-              </AlertDescription>
-            </Alert>
-          )}
-
           {category !== "AUTHENTICATION" ? (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <h3 className="text-xl font-semibold">Components</h3>
+                <h3 className="text-xl font-semibold">{dict.components}</h3>
                 <div className="flex items-center gap-2">
                   {!components.some((c) => c.type === "HEADER") && (
                     <Button variant="outline" onClick={() => addComponent("HEADER")} disabled={isLoading}>
                       <PlusCircle className="h-4 w-4 mr-2" />
-                      Add Header
+                      {dict.addHeader}
                     </Button>
                   )}
                   {!components.some((c) => c.type === "FOOTER") && (
                     <Button variant="outline" onClick={() => addComponent("FOOTER")} disabled={isLoading}>
                       <PlusCircle className="h-4 w-4 mr-2" />
-                      Add Footer
+                      {dict.addFooter}
                     </Button>
                   )}
                   {!components.some((c) => c.type === "BUTTONS") && (
                     <Button variant="outline" onClick={() => addComponent("BUTTONS")} disabled={isLoading}>
                       <PlusCircle className="h-4 w-4 mr-2" />
-                      Add Buttons
+                      {dict.addButtons}
                     </Button>
                   )}
                 </div>
@@ -954,12 +961,52 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
               </div>
             </div>
           ) : (
-            <AuthenticationTemplateForm onChange={handleAuthFormChange} />
+            <AuthenticationTemplateForm onChange={handleAuthFormChange} dictionary={dict} />
+          )}
+
+          {/* Meta Validation Alert - Only show user-facing errors */}
+          {(userErrors.length > 0 || userWarnings.length > 0) && (
+            <Alert variant={userErrors.length > 0 ? "destructive" : "default"}>
+              {userErrors.length > 0 ? (
+                <AlertTriangle className="h-4 w-4" />
+              ) : (
+                <Info className="h-4 w-4" />
+              )}
+              <AlertDescription>
+                <div className="space-y-2">
+                  <div className="font-semibold">
+                    {userErrors.length > 0 ? dict.validation.pleaseFixIssues : dict.validation.templateSuggestions}
+                  </div>
+                  <div className="space-y-1">
+                    {userErrors.map((error, index) => (
+                      <div key={index} className="text-sm">
+                        • {error.message}
+                      </div>
+                    ))}
+                    {userWarnings.map((warning, index) => (
+                      <div key={index} className="text-sm">
+                        • {warning.message}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Success Message */}
+          {isValid && userErrors.length === 0 && userWarnings.length === 0 && (name || language || category !== "MARKETING") && (
+            <Alert>
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription>
+                {dict.validation.templateStructureGood}
+              </AlertDescription>
+            </Alert>
           )}
         </CardContent>
         <CardFooter className="flex justify-end gap-4">
           <Button variant="outline" onClick={onCancel} disabled={isLoading}>
-            Cancel
+            {dict.cancel}
           </Button>
           <Button 
             variant="success" 
@@ -969,10 +1016,10 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating Template...
+                {dict.loading.creatingTemplate}
               </>
             ) : (
-              "Create Template"
+              dict.createTemplate
             )}
           </Button>
         </CardFooter>

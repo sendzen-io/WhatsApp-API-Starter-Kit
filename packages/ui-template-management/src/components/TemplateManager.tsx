@@ -43,6 +43,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@workspace/ui-core/components/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@workspace/ui-core/components/dialog";
 import type { ErrorDetails } from "@workspace/ui-template-management/components/TemplateErrorUI";
 import TemplateErrorUI from "@workspace/ui-template-management/components/TemplateErrorUI";
 import CreateTemplateUI from "./CreateTemplateUI";
@@ -59,7 +67,7 @@ import {
 
 // #region TYPES AND INTERFACES
 export interface TemplateManagerDictionary {
-  templates: {
+    templates: {
     contains_media: string;
     preview: string;
     edit_template: string;
@@ -79,6 +87,94 @@ export interface TemplateManagerDictionary {
     no_templates_desc: string;
     create_first_template: string;
     rejected: string;
+    delete_confirmation: {
+      title: string;
+      description: string;
+      cancel: string;
+      confirm: string;
+    };
+  };
+  createTemplate: {
+    title: string;
+    description: string;
+    templateName: string;
+    templateNamePlaceholder: string;
+    templateNameHelp: string;
+    language: string;
+    languagePlaceholder: string;
+    category: string;
+    categoryPlaceholder: string;
+    categories: {
+      marketing: string;
+      utility: string;
+      authentication: string;
+    };
+    components: string;
+    addHeader: string;
+    addFooter: string;
+    addButtons: string;
+    body: string;
+    footer: string;
+    buttons: string;
+    buttonText: string;
+    buttonTextPlaceholder: string;
+    buttonUrl: string;
+    buttonUrlPlaceholder: string;
+    buttonPhone: string;
+    buttonPhonePlaceholder: string;
+    removeComponent: string;
+    validation: {
+      pleaseFixIssues: string;
+      templateSuggestions: string;
+      templateStructureGood: string;
+      validationError: string;
+      fillRequiredFields: string;
+      invalidCategory: string;
+      templateValidationFailed: string;
+      fixIssuesBeforeCreating: string;
+    };
+    loading: {
+      creatingTemplate: string;
+      pleaseWait: string;
+    };
+    cancel: string;
+    createTemplate: string;
+    authentication: {
+      title: string;
+      body: string;
+      addSecurityRecommendation: string;
+      footer: string;
+      addFooter: string;
+      removeFooter: string;
+      codeExpiration: string;
+      codeExpirationMinutes: string;
+      otpButtons: string;
+      addButtons: string;
+      removeButtons: string;
+      buttonNumber: string;
+      copyCode: string;
+      oneTap: string;
+      zeroTap: string;
+      buttonTextOptional: string;
+      autofillTextOptional: string;
+      supportedApps: string;
+      appNumber: string;
+      packageName: string;
+      packageNamePlaceholder: string;
+      signatureHash: string;
+      signatureHashPlaceholder: string;
+      addApp: string;
+      addOtpButton: string;
+      zeroTapTermsAccepted: string;
+      validation: {
+        maxCharacters: string;
+        alphanumericUnderscorePeriod: string;
+        twoSegmentsRequired: string;
+        segmentsStartWithLetter: string;
+        exactlyElevenCharacters: string;
+        invalidCharacters: string;
+      };
+    };
   };
 }
 
@@ -137,6 +233,94 @@ const fallbackDictionary: TemplateManagerDictionary = {
       "Get started by creating your first WhatsApp message template",
     create_first_template: "Create Your First Template",
     rejected: "Rejected",
+    delete_confirmation: {
+      title: "Delete Template",
+      description: "Are you sure you want to delete this template? This action cannot be undone.",
+      cancel: "Cancel",
+      confirm: "Delete",
+    },
+  },
+  createTemplate: {
+    title: "Create New Template",
+    description: "Fill in the details to create a new message template.",
+    templateName: "Template Name",
+    templateNamePlaceholder: "e.g. order_confirmation",
+    templateNameHelp: "Lowercase letters, numbers, and underscores only.",
+    language: "Language",
+    languagePlaceholder: "Select a language",
+    category: "Category",
+    categoryPlaceholder: "Select a category",
+    categories: {
+      marketing: "Marketing",
+      utility: "Utility",
+      authentication: "Authentication",
+    },
+    components: "Components",
+    addHeader: "Add Header",
+    addFooter: "Add Footer",
+    addButtons: "Add Buttons",
+    body: "Body",
+    footer: "Footer",
+    buttons: "Buttons",
+    buttonText: "Button Text",
+    buttonTextPlaceholder: "Enter button text",
+    buttonUrl: "URL",
+    buttonUrlPlaceholder: "https://example.com",
+    buttonPhone: "Phone Number",
+    buttonPhonePlaceholder: "+1234567890",
+    removeComponent: "Remove",
+    validation: {
+      pleaseFixIssues: "Please fix the following issues:",
+      templateSuggestions: "Template suggestions:",
+      templateStructureGood: "Template structure looks good! Ready to create.",
+      validationError: "Validation Error",
+      fillRequiredFields: "Please fill in all required fields before creating the template.",
+      invalidCategory: "Invalid template category.",
+      templateValidationFailed: "Template Validation Failed",
+      fixIssuesBeforeCreating: "Please fix the following issues before creating the template:",
+    },
+    loading: {
+      creatingTemplate: "Creating Template...",
+      pleaseWait: "Please wait while we process your template",
+    },
+    cancel: "Cancel",
+    createTemplate: "Create Template",
+    authentication: {
+      title: "Authentication Components",
+      body: "Body",
+      addSecurityRecommendation: "Add security recommendation",
+      footer: "Footer",
+      addFooter: "Add Footer",
+      removeFooter: "Remove Footer",
+      codeExpiration: "Code Expiration (minutes)",
+      codeExpirationMinutes: "Code Expiration (minutes)",
+      otpButtons: "OTP Buttons",
+      addButtons: "Add Buttons",
+      removeButtons: "Remove Buttons",
+      buttonNumber: "Button {number}",
+      copyCode: "Copy Code",
+      oneTap: "One-Tap",
+      zeroTap: "Zero-Tap",
+      buttonTextOptional: "Button Text (optional)",
+      autofillTextOptional: "Autofill Text (optional)",
+      supportedApps: "Supported Apps",
+      appNumber: "App {number}",
+      packageName: "Package Name",
+      packageNamePlaceholder: "com.example.app",
+      signatureHash: "Signature Hash",
+      signatureHashPlaceholder: "11-character hash",
+      addApp: "Add App",
+      addOtpButton: "Add OTP Button",
+      zeroTapTermsAccepted: "Zero-Tap Terms Accepted",
+      validation: {
+        maxCharacters: "Maximum 224 characters.",
+        alphanumericUnderscorePeriod: "Must be alphanumeric, underscore, or period.",
+        twoSegmentsRequired: "Must have at least two segments separated by a dot.",
+        segmentsStartWithLetter: "Each segment must start with a letter.",
+        exactlyElevenCharacters: "Must be exactly 11 characters.",
+        invalidCharacters: "Invalid characters. Use A-Z, a-z, 0-9, +, /, or =.",
+      },
+    },
   },
 };
 // #endregion
@@ -228,6 +412,7 @@ function TemplateCard({
   const [mediaError, setMediaError] = useState(false);
   const [mediaLoaded, setMediaLoaded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
   const wasDeletingRef = useRef(isDeleting);
   useEffect(() => {
@@ -269,7 +454,17 @@ function TemplateCard({
   const handleEditTemplate = () => onEdit(template.id);
   const handleDeleteRequest = (event: Event) => {
     event.preventDefault();
+    setShowDeleteConfirmation(true);
+    setMenuOpen(false);
+  };
+  
+  const handleConfirmDelete = () => {
+    setShowDeleteConfirmation(false);
     onDelete(template.id);
+  };
+  
+  const handleCancelDelete = () => {
+    setShowDeleteConfirmation(false);
   };
 
   const handleButtonClick = (button: ResponseButton) => {
@@ -535,7 +730,7 @@ function TemplateCard({
             buttonsComponent.buttons.length > 0 && (
               <div className="flex-shrink-0 mt-4 space-y-2 template-buttons-section">
                 <Separator className="template-buttons-separator" />
-                <div className="space-y-1.5 template-buttons-container max-h-24 overflow-y-auto">
+                <div className="space-y-1.5 template-buttons-container overflow-y-auto">
                   {buttonsComponent.buttons.map((button, index) => (
                     <div
                       key={index}
@@ -562,6 +757,52 @@ function TemplateCard({
             )}
         </CardContent>
       </Card>
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteConfirmation} onOpenChange={setShowDeleteConfirmation}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{dict.templates.delete_confirmation.title}</DialogTitle>
+            <DialogDescription>
+              {dict.templates.delete_confirmation.description}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+              <code className="text-sm font-mono bg-background px-2 py-1 rounded text-muted-foreground">
+                {template.name}
+              </code>
+              <StatusBadge status={template.status} />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={handleCancelDelete}
+              disabled={isDeleting}
+            >
+              {dict.templates.delete_confirmation.cancel}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  {dict.templates.delete_confirmation.confirm}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   );
 }

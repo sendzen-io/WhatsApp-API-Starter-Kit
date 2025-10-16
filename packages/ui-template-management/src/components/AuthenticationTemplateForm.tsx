@@ -11,18 +11,18 @@ import { PlusCircle, Trash2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@workspace/ui-core/components/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@workspace/ui-core/components/select';
 
-const validatePackageName = (name: string): string | undefined => {
-    if (name.length > 224) return "Maximum 224 characters.";
-    if (!/^[a-zA-Z0-9_.]+$/.test(name)) return "Must be alphanumeric, underscore, or period.";
+const validatePackageName = (name: string, dict: any): string | undefined => {
+    if (name.length > 224) return dict.validation.maxCharacters;
+    if (!/^[a-zA-Z0-9_.]+$/.test(name)) return dict.validation.alphanumericUnderscorePeriod;
     const segments = name.split('.');
-    if (segments.length < 2) return "Must have at least two segments separated by a dot.";
-    if (segments.some(s => !/^[a-zA-Z]/.test(s))) return "Each segment must start with a letter.";
+    if (segments.length < 2) return dict.validation.twoSegmentsRequired;
+    if (segments.some(s => !/^[a-zA-Z]/.test(s))) return dict.validation.segmentsStartWithLetter;
     return undefined;
 };
 
-const validateSignatureHash = (hash: string): string | undefined => {
-    if (hash.length !== 11) return "Must be exactly 11 characters.";
-    if (!/^[a-zA-Z0-9+/=]+$/.test(hash)) return "Invalid characters. Use A-Z, a-z, 0-9, +, /, or =.";
+const validateSignatureHash = (hash: string, dict: any): string | undefined => {
+    if (hash.length !== 11) return dict.validation.exactlyElevenCharacters;
+    if (!/^[a-zA-Z0-9+/=]+$/.test(hash)) return dict.validation.invalidCharacters;
     return undefined;
 };
 
@@ -37,7 +37,44 @@ type AppErrors = {
     signatureHash?: string;
 }
 
-const AuthenticationTemplateForm: React.FC<AuthenticationTemplateFormProps> = ({ onChange }) => {
+const AuthenticationTemplateForm: React.FC<AuthenticationTemplateFormProps> = ({ onChange, dictionary }) => {
+  // Use dictionary with fallback to English text
+  const dict = dictionary?.authentication || {
+    title: "Authentication Components",
+    body: "Body",
+    addSecurityRecommendation: "Add security recommendation",
+    footer: "Footer",
+    addFooter: "Add Footer",
+    removeFooter: "Remove Footer",
+    codeExpiration: "Code Expiration (minutes)",
+    codeExpirationMinutes: "Code Expiration (minutes)",
+    otpButtons: "OTP Buttons",
+    addButtons: "Add Buttons",
+    removeButtons: "Remove Buttons",
+    buttonNumber: "Button {number}",
+    copyCode: "Copy Code",
+    oneTap: "One-Tap",
+    zeroTap: "Zero-Tap",
+    buttonTextOptional: "Button Text (optional)",
+    autofillTextOptional: "Autofill Text (optional)",
+    supportedApps: "Supported Apps",
+    appNumber: "App {number}",
+    packageName: "Package Name",
+    packageNamePlaceholder: "com.example.app",
+    signatureHash: "Signature Hash",
+    signatureHashPlaceholder: "11-character hash",
+    addApp: "Add App",
+    addOtpButton: "Add OTP Button",
+    zeroTapTermsAccepted: "Zero-Tap Terms Accepted",
+    validation: {
+      maxCharacters: "Maximum 224 characters.",
+      alphanumericUnderscorePeriod: "Must be alphanumeric, underscore, or period.",
+      twoSegmentsRequired: "Must have at least two segments separated by a dot.",
+      segmentsStartWithLetter: "Each segment must start with a letter.",
+      exactlyElevenCharacters: "Must be exactly 11 characters.",
+      invalidCharacters: "Invalid characters. Use A-Z, a-z, 0-9, +, /, or =.",
+    },
+  };
     const [body, setBody] = useState<AuthBodyComponent>({ type: 'BODY', add_security_recommendation: false });
     const [footer, setFooter] = useState<AuthFooterComponent | null>(null);
     const [buttons, setButtons] = useState<AuthButtonsComponent | null>(null);
@@ -69,7 +106,7 @@ const AuthenticationTemplateForm: React.FC<AuthenticationTemplateFormProps> = ({
                 break;
             case 'copy_code':
             default:
-                newButton = { type: 'OTP', otp_type: 'copy_code', text: 'Copy Code' };
+                newButton = { type: 'OTP', otp_type: 'copy_code', text: dict.copyCode };
                 break;
         }
         if (buttons) {
@@ -103,7 +140,7 @@ const AuthenticationTemplateForm: React.FC<AuthenticationTemplateFormProps> = ({
 
         switch(newType) {
             case 'copy_code':
-                newButton = { type: 'OTP', otp_type: 'copy_code', text: 'Copy Code' };
+                newButton = { type: 'OTP', otp_type: 'copy_code', text: dict.copyCode };
                 break;
             case 'one_tap':
                 newButton = { type: 'OTP', otp_type: 'one_tap', text, autofill_text, supported_apps };
@@ -117,11 +154,11 @@ const AuthenticationTemplateForm: React.FC<AuthenticationTemplateFormProps> = ({
     
     return (
         <div className="space-y-6">
-            <h3 className="text-xl font-semibold">Authentication Components</h3>
+            <h3 className="text-xl font-semibold">{dict.title}</h3>
             
             <Card>
                 <CardHeader>
-                    <CardTitle>Body</CardTitle>
+                    <CardTitle>{dict.body}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="flex items-center space-x-2">
@@ -130,7 +167,7 @@ const AuthenticationTemplateForm: React.FC<AuthenticationTemplateFormProps> = ({
                             checked={body.add_security_recommendation} 
                             onCheckedChange={(checked) => setBody({ ...body, add_security_recommendation: !!checked })}
                         />
-                        <Label htmlFor="security-recommendation">Add security recommendation</Label>
+                        <Label htmlFor="security-recommendation">{dict.addSecurityRecommendation}</Label>
                     </div>
                 </CardContent>
             </Card>
@@ -138,9 +175,9 @@ const AuthenticationTemplateForm: React.FC<AuthenticationTemplateFormProps> = ({
             <Card>
                 <CardHeader>
                     <div className="flex justify-between items-center">
-                        <CardTitle>Footer</CardTitle>
+                        <CardTitle>{dict.footer}</CardTitle>
                         {!footer ? (
-                           <Button variant="outline" size="sm" onClick={() => setFooter({ type: 'FOOTER' })}><PlusCircle className="h-4 w-4 mr-2"/>Add Footer</Button>
+                           <Button variant="outline" size="sm" onClick={() => setFooter({ type: 'FOOTER' })}><PlusCircle className="h-4 w-4 mr-2"/>{dict.addFooter}</Button>
                         ) : (
                            <Button variant="ghost" size="sm" onClick={() => setFooter(null)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
                         )}
@@ -148,7 +185,7 @@ const AuthenticationTemplateForm: React.FC<AuthenticationTemplateFormProps> = ({
                 </CardHeader>
                 {footer && (
                     <CardContent className="space-y-2">
-                        <Label htmlFor="code-expiration">Code Expiration (minutes)</Label>
+                        <Label htmlFor="code-expiration">{dict.codeExpiration}</Label>
                         <Input 
                             id="code-expiration" 
                             type="number" 
@@ -162,9 +199,9 @@ const AuthenticationTemplateForm: React.FC<AuthenticationTemplateFormProps> = ({
              <Card>
                 <CardHeader>
                      <div className="flex justify-between items-center">
-                        <CardTitle>OTP Buttons</CardTitle>
+                        <CardTitle>{dict.otpButtons}</CardTitle>
                         {!buttons ? (
-                             <Button variant="outline" size="sm" onClick={() => setButtons({ type: 'BUTTONS', buttons: [] })}><PlusCircle className="h-4 w-4 mr-2"/>Add Buttons</Button>
+                             <Button variant="outline" size="sm" onClick={() => setButtons({ type: 'BUTTONS', buttons: [] })}><PlusCircle className="h-4 w-4 mr-2"/>{dict.addButtons}</Button>
                         ) : (
                              <Button variant="ghost" size="sm" onClick={() => setButtons(null)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
                         )}
@@ -175,33 +212,33 @@ const AuthenticationTemplateForm: React.FC<AuthenticationTemplateFormProps> = ({
                         {buttons.buttons.map((button, index) => (
                             <Card key={index} className="p-4 space-y-3">
                                 <div className="flex justify-between items-center">
-                                    <Label>Button {index + 1}</Label>
+                                    <Label>{dict.buttonNumber.replace('{number}', (index + 1).toString())}</Label>
                                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeAuthButton(index)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
                                 </div>
                                 <Select value={button.otp_type} onValueChange={(value: 'copy_code' | 'one_tap' | 'zero_tap') => handleButtonTypeChange(index, value)}>
                                    <SelectTrigger><SelectValue/></SelectTrigger>
                                    <SelectContent>
-                                       <SelectItem value="copy_code">Copy Code</SelectItem>
-                                       <SelectItem value="one_tap">One-Tap</SelectItem>
-                                       <SelectItem value="zero_tap">Zero-Tap</SelectItem>
+                                       <SelectItem value="copy_code">{dict.copyCode}</SelectItem>
+                                       <SelectItem value="one_tap">{dict.oneTap}</SelectItem>
+                                       <SelectItem value="zero_tap">{dict.zeroTap}</SelectItem>
                                    </SelectContent>
                                 </Select>
                                 
                                 {button.otp_type !== 'copy_code' &&
-                                  <Input placeholder="Button Text (optional)" maxLength={25} value={button.text || ''} onChange={e => updateAuthButton(index, {...button, text: e.target.value})} />
+                                  <Input placeholder={dict.buttonTextOptional} maxLength={25} value={button.text || ''} onChange={e => updateAuthButton(index, {...button, text: e.target.value})} />
                                 }
         
                                 {(button.otp_type === 'one_tap' || button.otp_type === 'zero_tap') && (
                                     <>
-                                        <Input placeholder="Autofill Text (optional)" value={button.autofill_text || ''} onChange={e => updateAuthButton(index, {...button, autofill_text: e.target.value})} />
+                                        <Input placeholder={dict.autofillTextOptional} value={button.autofill_text || ''} onChange={e => updateAuthButton(index, {...button, autofill_text: e.target.value})} />
                                         <div className="space-y-2 pt-2">
-                                            <Label>Supported Apps</Label>
+                                            <Label>{dict.supportedApps}</Label>
                                             {button.supported_apps.map((app, appIndex) => {
                                                 const errors = appErrors[index]?.[appIndex] || {};
                                                 return (
                                                 <div key={appIndex} className="p-3 border rounded-lg bg-muted/50 space-y-3">
                                                     <div className="flex justify-between items-center">
-                                                        <Label className="text-sm font-medium">App {appIndex + 1}</Label>
+                                                        <Label className="text-sm font-medium">{dict.appNumber.replace('{number}', (appIndex + 1).toString())}</Label>
                                                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
                                                             const newApps = button.supported_apps.filter((_, i) => i !== appIndex);
                                                             updateAuthButton(index, {...button, supported_apps: newApps});
@@ -213,13 +250,13 @@ const AuthenticationTemplateForm: React.FC<AuthenticationTemplateFormProps> = ({
                                                     </div>
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                         <div className="space-y-2">
-                                                            <Label htmlFor={`pkg-name-${index}-${appIndex}`}>Package Name</Label>
-                                                            <Input id={`pkg-name-${index}-${appIndex}`} placeholder="com.example.app" maxLength={224} value={app.package_name} onChange={e => {
+                                                            <Label htmlFor={`pkg-name-${index}-${appIndex}`}>{dict.packageName}</Label>
+                                                            <Input id={`pkg-name-${index}-${appIndex}`} placeholder={dict.packageNamePlaceholder} maxLength={224} value={app.package_name} onChange={e => {
                                                                 const newApps = [...button.supported_apps];
                                                                 newApps[appIndex] = {...app, package_name: e.target.value};
                                                                 updateAuthButton(index, {...button, supported_apps: newApps});
                                                                 
-                                                                const error = validatePackageName(e.target.value);
+                                                                const error = validatePackageName(e.target.value, dict);
                                                                 const newErrors = [...appErrors];
                                                                 if (!newErrors[index]) newErrors[index] = [];
                                                                 newErrors[index][appIndex] = {...newErrors[index][appIndex], packageName: error};
@@ -228,13 +265,13 @@ const AuthenticationTemplateForm: React.FC<AuthenticationTemplateFormProps> = ({
                                                             {errors.packageName && <p className="text-xs text-destructive mt-1">{errors.packageName}</p>}
                                                         </div>
                                                         <div className="space-y-2">
-                                                            <Label htmlFor={`sig-hash-${index}-${appIndex}`}>Signature Hash</Label>
-                                                            <Input id={`sig-hash-${index}-${appIndex}`} placeholder="11-character hash" maxLength={11} value={app.signature_hash} onChange={e => {
+                                                            <Label htmlFor={`sig-hash-${index}-${appIndex}`}>{dict.signatureHash}</Label>
+                                                            <Input id={`sig-hash-${index}-${appIndex}`} placeholder={dict.signatureHashPlaceholder} maxLength={11} value={app.signature_hash} onChange={e => {
                                                                 const newApps = [...button.supported_apps];
                                                                 newApps[appIndex] = {...app, signature_hash: e.target.value};
                                                                 updateAuthButton(index, {...button, supported_apps: newApps});
 
-                                                                const error = validateSignatureHash(e.target.value);
+                                                                const error = validateSignatureHash(e.target.value, dict);
                                                                 const newErrors = [...appErrors];
                                                                 if (!newErrors[index]) newErrors[index] = [];
                                                                 newErrors[index][appIndex] = {...newErrors[index][appIndex], signatureHash: error};
@@ -248,7 +285,7 @@ const AuthenticationTemplateForm: React.FC<AuthenticationTemplateFormProps> = ({
                                             <Button variant="outline" size="sm" onClick={() => {
                                                 const newApps = [...button.supported_apps, {package_name: '', signature_hash: ''}];
                                                 updateAuthButton(index, {...button, supported_apps: newApps});
-                                            }} disabled={button.supported_apps.length >= 5}><PlusCircle className="h-4 w-4 mr-2"/>Add App</Button>
+                                            }} disabled={button.supported_apps.length >= 5}><PlusCircle className="h-4 w-4 mr-2"/>{dict.addApp}</Button>
                                         </div>
                                     </>
                                 )}
@@ -259,7 +296,7 @@ const AuthenticationTemplateForm: React.FC<AuthenticationTemplateFormProps> = ({
                                             checked={button.zero_tap_terms_accepted}
                                             onCheckedChange={(checked) => updateAuthButton(index, {...button, zero_tap_terms_accepted: !!checked})}
                                         />
-                                        <Label htmlFor={`zero-tap-terms-${index}`}>Zero-Tap Terms Accepted</Label>
+                                        <Label htmlFor={`zero-tap-terms-${index}`}>{dict.zeroTapTermsAccepted}</Label>
                                      </div>
                                  )}
                             </Card>
@@ -267,12 +304,12 @@ const AuthenticationTemplateForm: React.FC<AuthenticationTemplateFormProps> = ({
                         
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="outline" className="w-full" disabled={buttons.buttons.length >= 1}><PlusCircle className="h-4 w-4 mr-2"/>Add OTP Button</Button>
+                                <Button variant="outline" className="w-full" disabled={buttons.buttons.length >= 1}><PlusCircle className="h-4 w-4 mr-2"/>{dict.addOtpButton}</Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent>
-                                <DropdownMenuItem onClick={() => addAuthButton('copy_code')}>Copy Code</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => addAuthButton('one_tap')}>One-Tap</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => addAuthButton('zero_tap')}>Zero-Tap</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => addAuthButton('copy_code')}>{dict.copyCode}</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => addAuthButton('one_tap')}>{dict.oneTap}</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => addAuthButton('zero_tap')}>{dict.zeroTap}</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </CardContent>
