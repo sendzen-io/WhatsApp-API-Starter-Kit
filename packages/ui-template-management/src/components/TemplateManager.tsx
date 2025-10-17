@@ -198,6 +198,7 @@ interface TemplateManagerProps {
   onRetry: () => void;
   onSync: () => void;
   onCreate?: (payload: CreateTemplatePayload) => Promise<void>;
+  onCreateClick?: () => void; // New prop for custom create button behavior
   onFilterChange: (
     filter: "all" | "approved" | "pending" | "rejected"
   ) => void;
@@ -507,7 +508,7 @@ function TemplateCard({
                   alt={alt}
                   width={300}
                   height={160}
-                  className="w-full h-40 object-cover template-media-image"
+                  className="w-full h-40 object-cover template-media-image max-h-[200px]"
                   style={{ height: "auto" }}
                   onError={() => setMediaError(true)}
                   onLoad={() => setMediaLoaded(true)}
@@ -867,6 +868,7 @@ const TemplateManager: React.FC<TemplateManagerProps> = ({
   onRetry,
   onSync,
   onCreate,
+  onCreateClick,
   onFilterChange,
   onPreview,
   onEdit,
@@ -878,7 +880,13 @@ const TemplateManager: React.FC<TemplateManagerProps> = ({
   const [view, setView] = useState<"list" | "create">("list");
 
   const handleCreateClick = () => {
-    setView("create");
+    if (onCreateClick) {
+      // Use custom create behavior (e.g., redirect to route)
+      onCreateClick();
+    } else {
+      // Default behavior (show inline form)
+      setView("create");
+    }
   };
 
   const handleCancelCreate = () => {

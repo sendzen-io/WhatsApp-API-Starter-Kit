@@ -110,7 +110,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
     createTemplate: "Create Template",
   };
   const [name, setName] = useState("");
-  const [language, setLanguage] = useState("");
+  const [language, setLanguage] = useState("en_US");
   const [category, setCategory] = useState<
     "MARKETING" | "UTILITY" | "AUTHENTICATION"
   >("MARKETING");
@@ -863,22 +863,22 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
         <CardContent className="space-y-8">
           {/* Basic Info */}
           <div className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="template-name">{dict.templateName}</Label>
-              <Input
-                id="template-name"
-                placeholder={dict.templateNamePlaceholder}
-                value={name}
-                onChange={(e) => setName(e.target.value.replace(/[^a-z0-9_]/g, ""))}
-                disabled={isLoading}
-              />
-              <p className="text-sm text-muted-foreground">
-                {dict.templateNameHelp}
-              </p>
-              {errors.name && <p className="text-sm text-destructive mt-1">{errors.name}</p>}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div className="space-y-2">
+            <div className="grid grid-cols-12 gap-6">
+              <div className="col-span-6 space-y-2">
+                <Label htmlFor="template-name">{dict.templateName}</Label>
+                <Input
+                  id="template-name"
+                  placeholder={dict.templateNamePlaceholder}
+                  value={name}
+                  onChange={(e) => setName(e.target.value.replace(/[^a-z0-9_]/g, ""))}
+                  disabled={isLoading}
+                />
+                <p className="text-sm text-muted-foreground">
+                  {dict.templateNameHelp}
+                </p>
+                {errors.name && <p className="text-sm text-destructive mt-1">{errors.name}</p>}
+              </div>
+              <div className="col-span-3 space-y-2">
                 <Label htmlFor="template-language">{dict.language}</Label>
                 <Select value={language} onValueChange={setLanguage} disabled={isLoading}>
                   <SelectTrigger id="template-language">
@@ -894,7 +894,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                 </Select>
                 {errors.language && <p className="text-sm text-destructive mt-1">{errors.language}</p>}
               </div>
-              <div className="space-y-2">
+              <div className="col-span-3 space-y-2">
                 <Label htmlFor="template-category">{dict.category}</Label>
                 <Select value={category} onValueChange={handleCategoryChange} disabled={isLoading}>
                   <SelectTrigger id="template-category">
@@ -908,6 +908,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                     </SelectItem>
                   </SelectContent>
                 </Select>
+                {errors.category && <p className="text-sm text-destructive mt-1">{errors.category}</p>}
               </div>
             </div>
           </div>
