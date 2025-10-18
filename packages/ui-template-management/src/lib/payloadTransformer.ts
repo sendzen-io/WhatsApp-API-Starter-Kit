@@ -9,7 +9,7 @@ export interface MetaTemplatePayload {
   name: string;
   language: string;
   category: 'MARKETING' | 'UTILITY' | 'AUTHENTICATION';
-  parameter_format?: 'NAMED' | 'POSITIONAL';
+  parameter_format?: 'named' | 'positional';
   message_send_ttl_seconds?: number;
   components: MetaTemplateComponent[];
 }
@@ -63,7 +63,7 @@ export class PayloadTransformer {
 
     // Add optional fields
     if ('parameter_format' in payload && payload.parameter_format) {
-      metaPayload.parameter_format = payload.parameter_format as 'NAMED' | 'POSITIONAL';
+      metaPayload.parameter_format = payload.parameter_format as 'named' | 'positional';
     }
 
     if ('message_send_ttl_seconds' in payload && payload.message_send_ttl_seconds) {

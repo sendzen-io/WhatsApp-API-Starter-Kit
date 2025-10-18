@@ -35,6 +35,8 @@ import {
   Phone,
   MessageSquare,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -66,6 +68,16 @@ import {
 } from "../types/templateTypes";
 
 // #region TYPES AND INTERFACES
+export interface PaginationInfo {
+  cursors: {
+    before: string;
+    after: string;
+  };
+  next?: string;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
 export interface TemplateManagerDictionary {
     templates: {
     contains_media: string;
@@ -92,6 +104,13 @@ export interface TemplateManagerDictionary {
       description: string;
       cancel: string;
       confirm: string;
+    };
+    pagination: {
+      previous: string;
+      next: string;
+      showing: string;
+      of: string;
+      templates: string;
     };
   };
   createTemplate: {
@@ -195,6 +214,8 @@ interface TemplateManagerProps {
   deletingTemplateId?: string | null;
   creatingTemplate?: boolean;
   currentFilter: "all" | "approved" | "pending" | "rejected";
+  // Pagination props
+  pagination?: PaginationInfo;
   onRetry: () => void;
   onSync: () => void;
   onCreate?: (payload: CreateTemplatePayload) => Promise<void>;
@@ -207,6 +228,9 @@ interface TemplateManagerProps {
   onCopy: (templateBody: string) => void;
   onDelete: (templateId: string) => void;
   onFileUpload?: (file: File) => Promise<string>;
+  // Pagination handlers
+  onNextPage?: () => void;
+  onPreviousPage?: () => void;
 }
 // #endregion
 
@@ -239,6 +263,13 @@ const fallbackDictionary: TemplateManagerDictionary = {
       description: "Are you sure you want to delete this template? This action cannot be undone.",
       cancel: "Cancel",
       confirm: "Delete",
+    },
+    pagination: {
+      previous: "Previous",
+      next: "Next",
+      showing: "Showing",
+      of: "of",
+      templates: "templates",
     },
   },
   createTemplate: {
@@ -853,6 +884,62 @@ function TemplateCardSkeleton() {
 }
 // #endregion
 
+// #region PAGINATION CONTROLS
+interface PaginationControlsProps {
+  pagination?: PaginationInfo;
+  currentTemplatesCount: number;
+  totalTemplates: number;
+  onNextPage?: () => void;
+  onPreviousPage?: () => void;
+  dictionary: TemplateManagerDictionary;
+}
+
+function PaginationControls({
+  pagination,
+  currentTemplatesCount,
+  totalTemplates,
+  onNextPage,
+  onPreviousPage,
+  dictionary,
+}: PaginationControlsProps) {
+  if (!pagination) return null;
+
+  const dict = dictionary;
+
+  return (
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 template-pagination">
+      <div className="text-sm text-muted-foreground template-pagination-info">
+        {dict.templates.pagination.showing} {currentTemplatesCount} {dict.templates.pagination.of} {totalTemplates} {dict.templates.pagination.templates}
+      </div>
+      
+      <div className="flex items-center gap-2 template-pagination-controls">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onPreviousPage}
+          disabled={!pagination.hasPreviousPage}
+          className="gap-2"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          {dict.templates.pagination.previous}
+        </Button>
+        
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onNextPage}
+          disabled={!pagination.hasNextPage}
+          className="gap-2"
+        >
+          {dict.templates.pagination.next}
+          <ChevronRight className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+// #endregion
+
 // #region MAIN COMPONENT
 const TemplateManager: React.FC<TemplateManagerProps> = ({
   templates,
@@ -865,6 +952,7 @@ const TemplateManager: React.FC<TemplateManagerProps> = ({
   creatingTemplate = false,
   currentFilter,
   totalTemplates,
+  pagination,
   onRetry,
   onSync,
   onCreate,
@@ -875,6 +963,8 @@ const TemplateManager: React.FC<TemplateManagerProps> = ({
   onCopy,
   onDelete,
   onFileUpload,
+  onNextPage,
+  onPreviousPage,
 }) => {
   const dict = providedDictionary || fallbackDictionary;
   const [view, setView] = useState<"list" | "create">("list");
@@ -1130,6 +1220,16 @@ const TemplateManager: React.FC<TemplateManagerProps> = ({
             ))}
           </div>
         )}
+        
+        {/* Pagination Controls */}
+        <PaginationControls
+          pagination={pagination}
+          currentTemplatesCount={templates.length}
+          totalTemplates={totalTemplates}
+          onNextPage={onNextPage}
+          onPreviousPage={onPreviousPage}
+          dictionary={dict}
+        />
       </div>
     </div>
   );

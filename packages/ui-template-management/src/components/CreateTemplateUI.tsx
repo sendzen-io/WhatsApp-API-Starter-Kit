@@ -49,7 +49,7 @@ import { AlertTriangle, CheckCircle, Info } from "lucide-react";
 
 interface CreateTemplateUIProps {
   onCancel: () => void;
-  onSubmit: (template: CreateTemplatePayload) => void;
+  onSubmit: (template: CreateTemplatePayload) => Promise<void>;
   dictionary?: any; // Will be properly typed when passed from TemplateManager
   onFileUpload?: (file: File) => Promise<string>;
   isLoading?: boolean;
@@ -114,6 +114,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
   const [category, setCategory] = useState<
     "MARKETING" | "UTILITY" | "AUTHENTICATION"
   >("MARKETING");
+  const [parameterFormat, setParameterFormat] = useState<"NAMED" | "POSITIONAL">("NAMED");
 
   const [components, setComponents] = useState<TemplateComponent[]>([
     { type: "BODY", text: "" },
@@ -124,19 +125,48 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
   const [errors, setErrors] = useState<Record<string, any>>({});
   const [isSubmittedOnce, setIsSubmittedOnce] = useState(false);
   const [isFormValid, setIsFormValid] = useState(false);
+  const [apiErrors, setApiErrors] = useState<string[]>([]);
   const { toast } = useToast();
   const { validateTemplate, isValid, errors: validationErrors, warnings, userErrors, userWarnings, errorMessage, clearValidation } = useTemplateValidation();
+
+  // Function to detect parameter format from template text
+  const detectParameterFormat = (text: string): "NAMED" | "POSITIONAL" => {
+    if (!text) return "NAMED"; // Default to named if no text
+    
+    // Check for positional parameters ({{1}}, {{2}}, etc.)
+    const positionalMatches = text.match(/{{(\d+)}}/g);
+    // Check for named parameters ({{first_name}}, {{order_number}}, etc.)
+    const namedMatches = text.match(/{{(\w+)}}/g);
+    
+    // If we find positional parameters, use positional format
+    if (positionalMatches && positionalMatches.length > 0) {
+      return "POSITIONAL";
+    }
+    
+    // If we find named parameters, use named format
+    if (namedMatches && namedMatches.length > 0) {
+      return "NAMED";
+    }
+    
+    // Default to named if no parameters found
+    return "NAMED";
+  };
 
   // Real-time validation
   useEffect(() => {
     if (name && language && category) {
+      // Auto-detect parameter format from body text
+      const bodyComponent = components.find(c => c.type === 'BODY') as BodyComponent | undefined;
+      const detectedFormat = bodyComponent?.text ? detectParameterFormat(bodyComponent.text) : "NAMED";
+      setParameterFormat(detectedFormat);
+
       let payload: CreateTemplatePayload;
       switch (category) {
         case "MARKETING":
-          payload = { name, language, category, components };
+          payload = { name, language, category, parameter_format: detectedFormat.toLowerCase() as "named" | "positional", components };
           break;
         case "UTILITY":
-          payload = { name, language, category, components };
+          payload = { name, language, category, parameter_format: detectedFormat.toLowerCase() as "named" | "positional", components };
           break;
         case "AUTHENTICATION":
           payload = { name, language, category, components: authComponents };
@@ -154,6 +184,10 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
     value: "MARKETING" | "UTILITY" | "AUTHENTICATION"
   ) => {
     setCategory(value);
+    // Clear API errors when user makes changes
+    if (apiErrors.length > 0) {
+      setApiErrors([]);
+    }
     if (value === "AUTHENTICATION") {
       setComponents([]);
       setAuthComponents([{ type: "BODY" }]);
@@ -378,20 +412,17 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    debugger;
     setIsSubmittedOnce(true);
     const newErrors = validate();
     const isFormValid = Object.keys(newErrors).length === 0;
     setErrors(newErrors);
 
     if (!isFormValid) {
-      // Show toast notification
-      toast({
-        variant: "destructive",
-        title: dict.validation.validationError,
-        description: dict.validation.fillRequiredFields,
-      });
-
+      // Store validation errors instead of showing toast
+      setApiErrors([dict.validation.fillRequiredFields]);
+      
       // Focus on the first error element
       focusOnFirstError(newErrors);
       return;
@@ -399,22 +430,24 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
 
     // Create payload based on category
     let payload: CreateTemplatePayload;
+    
+    // Auto-detect parameter format from body text for final payload
+    const bodyComponent = components.find(c => c.type === 'BODY') as BodyComponent | undefined;
+    const finalDetectedFormat = bodyComponent?.text ? detectParameterFormat(bodyComponent.text) : "NAMED";
+    
     switch (category) {
       case "MARKETING":
-        payload = { name, language, category, components };
+        payload = { name, language, category, parameter_format: finalDetectedFormat.toLowerCase() as "named" | "positional", components };
         break;
       case "UTILITY":
-        payload = { name, language, category, components };
+        payload = { name, language, category, parameter_format: finalDetectedFormat.toLowerCase() as "named" | "positional", components };
         break;
       case "AUTHENTICATION":
         payload = { name, language, category, components: authComponents };
         break;
       default:
-        toast({
-          variant: "destructive",
-          title: dict.validation.validationError,
-          description: dict.validation.invalidCategory,
-        });
+        // Store error instead of showing toast
+        setApiErrors([dict.validation.invalidCategory]);
         return;
     }
 
@@ -422,13 +455,18 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
     const metaValidation = validateTemplate(payload);
     
     if (!metaValidation.isValid) {
-      // Show Meta validation errors
-      toast({
-        variant: "destructive",
-        title: dict.validation.templateValidationFailed,
-        description: dict.validation.fixIssuesBeforeCreating,
-        duration: 10000,
-      });
+      // Store Meta validation errors instead of showing toast
+      const metaErrors = [];
+      if (metaValidation.errors && metaValidation.errors.length > 0) {
+        metaErrors.push(...metaValidation.errors.map((error: any) => error.message || error));
+      }
+      if (metaValidation.userErrors && metaValidation.userErrors.length > 0) {
+        metaErrors.push(...metaValidation.userErrors.map((error: any) => error.message || error));
+      }
+      if (metaErrors.length === 0) {
+        metaErrors.push(dict.validation.fixIssuesBeforeCreating);
+      }
+      setApiErrors(metaErrors);
       
       // Focus on the first error element
       focusOnFirstError(newErrors);
@@ -436,7 +474,43 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
     }
 
     // If validation passes, submit the template
-    onSubmit(payload);
+    setApiErrors([]); // Clear any previous API errors
+    
+    try {
+      await onSubmit(payload);
+      
+      // Show success toast message
+      toast({
+        title: dict.webhook?.template?.createdSuccessfully || "Template created successfully!",
+        description: dict.webhook?.template?.sentForApproval || "Your template has been submitted and is now pending approval from Meta.",
+        duration: 5000,
+      });
+      
+    } catch (error) {
+      // Handle API error response
+      let errorMessage = "An unexpected error occurred";
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        // Handle string errors (like Meta API errors)
+        errorMessage = error;
+      } else if (error && typeof error === 'object') {
+        // Handle object errors - try to extract meaningful message
+        if ('message' in error && typeof error.message === 'string') {
+          errorMessage = error.message;
+        } else if ('response' in error && typeof error.response === 'string') {
+          errorMessage = error.response;
+        } else if ('error' in error && typeof error.error === 'string') {
+          errorMessage = error.error;
+        }
+      }
+      
+      // Store API error details in validation section
+      setApiErrors([errorMessage]);
+      
+      console.error("Template creation failed:", error);
+    }
   };
 
   const handleAuthFormChange = useCallback((newAuthComponents: AuthTemplateComponent[], isValid: boolean) => {
@@ -447,59 +521,139 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
 
   const renderBody = (component: BodyComponent, index: number) => {
     const handleBodyChange = (newText: string) => {
-      const foundVariables = Array.from(
-        new Set(newText.match(/{{\w+}}/g) || [])
-      ).map((v) => v.replace(/{|}/g, ""));
+      // Clear API errors when user makes changes
+      if (apiErrors.length > 0) {
+        setApiErrors([]);
+      }
+      
+      // Auto-detect parameter format from the new text
+      const detectedFormat = detectParameterFormat(newText);
+      setParameterFormat(detectedFormat);
 
-      const existingExamples = component.example?.body_text_named_params || [];
-      const newExamples = foundVariables.map((name) => {
-        const existing = existingExamples.find((ex) => ex.param_name === name);
-        return existing || { param_name: name, example: "" };
-      });
-
-      const updatedComponent: BodyComponent = {
+      let updatedComponent: BodyComponent = {
         ...component,
         text: newText,
-        example: {
-          ...component.example,
-          body_text_named_params: newExamples,
-        },
+        example: { ...component.example },
       };
 
-      if (newExamples.length === 0) {
-        delete updatedComponent.example?.body_text_named_params;
-        if (
-          updatedComponent.example &&
-          Object.keys(updatedComponent.example).length === 0
-        ) {
-          delete updatedComponent.example;
+      if (detectedFormat === "NAMED") {
+        // Handle named parameters ({{first_name}})
+        const foundVariables = Array.from(
+          new Set(newText.match(/{{\w+}}/g) || [])
+        ).map((v) => v.replace(/{|}/g, ""));
+
+        const existingExamples = component.example?.body_text_named_params || [];
+        const newExamples = foundVariables.map((name) => {
+          const existing = existingExamples.find((ex) => ex.param_name === name);
+          return existing || { param_name: name, example: "" };
+        });
+
+        updatedComponent.example = {
+          ...updatedComponent.example,
+          body_text_named_params: newExamples,
+        };
+
+        // Clean up positional examples if they exist
+        if (updatedComponent.example?.body_text) {
+          delete updatedComponent.example.body_text;
         }
+
+        if (newExamples.length === 0) {
+          delete updatedComponent.example?.body_text_named_params;
+        }
+      } else {
+        // Handle positional parameters ({{1}}, {{2}})
+        const foundVariables = Array.from(
+          new Set(newText.match(/{{(\d+)}}/g) || [])
+        ).map((v) => v.replace(/{|}/g, ""));
+
+        // Generate proper example values for positional parameters
+        const existingExamples = component.example?.body_text?.[0] || [];
+        const newExamples = foundVariables.length > 0 ? [
+          foundVariables.map((paramNum, index) => {
+            // Try to preserve existing example values
+            const existingValue = existingExamples[index];
+            return existingValue || ""; // Use existing value or empty string
+          })
+        ] : [[]];
+
+        updatedComponent.example = {
+          ...updatedComponent.example,
+          body_text: newExamples,
+        };
+
+        // Clean up named examples if they exist
+        if (updatedComponent.example?.body_text_named_params) {
+          delete updatedComponent.example.body_text_named_params;
+        }
+
+        if (foundVariables.length === 0) {
+          delete updatedComponent.example?.body_text;
+        }
+      }
+
+      // Clean up empty example object
+      if (
+        updatedComponent.example &&
+        Object.keys(updatedComponent.example).length === 0
+      ) {
+        delete updatedComponent.example;
       }
 
       updateComponent(index, updatedComponent);
     };
 
     const handleExampleChange = (param_name: string, value: string) => {
-      if (!component.example?.body_text_named_params) return;
+      if (parameterFormat === "NAMED") {
+        if (!component.example?.body_text_named_params) return;
 
-      const newExamples = component.example.body_text_named_params.map((ex) =>
-        ex.param_name === param_name ? { ...ex, example: value } : ex
-      );
+        const newExamples = component.example.body_text_named_params.map((ex) =>
+          ex.param_name === param_name ? { ...ex, example: value } : ex
+        );
 
-      updateComponent(index, {
-        ...component,
-        example: {
-          ...component.example,
-          body_text_named_params: newExamples,
-        },
-      });
+        updateComponent(index, {
+          ...component,
+          example: {
+            ...component.example,
+            body_text_named_params: newExamples,
+          },
+        });
+      } else {
+        // For positional parameters, we need to update the body_text array
+        if (!component.example?.body_text) return;
+
+        const paramIndex = parseInt(param_name) - 1; // Convert {{1}} to index 0
+        const currentExamples = component.example.body_text[0] || [];
+        const newExamples = [...currentExamples];
+        
+        // Ensure the array is long enough
+        while (newExamples.length <= paramIndex) {
+          newExamples.push("");
+        }
+        
+        newExamples[paramIndex] = value;
+
+        updateComponent(index, {
+          ...component,
+          example: {
+            ...component.example,
+            body_text: [newExamples],
+          },
+        });
+      }
     };
 
     return (
         <Card key={index}>
             <CardHeader>
                 <CardTitle>Body</CardTitle>
-                <CardDescription>The main message content. Use named variables like {`{{variable_name}}`}. (Required)</CardDescription>
+                <CardDescription>
+                  The main message content. 
+                  {parameterFormat === "NAMED" 
+                    ? "Use named variables like {`{{variable_name}}`}. (Required)"
+                    : "Use positional variables like {`{{1}}`}, {`{{2}}`}. (Required)"
+                  }
+                </CardDescription>
             </CardHeader>
             <CardContent>
                 <Textarea
@@ -515,7 +669,8 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                 />
                 <p className="text-sm text-muted-foreground mt-1">Max length: {component.text.length}/1024 characters</p>
                 {errors[`body_${index}`] && <p className="text-sm text-destructive mt-1">{errors[`body_${index}`]}</p>}
-                {(component.example?.body_text_named_params && component.example.body_text_named_params.length > 0) && (
+                {/* Named Parameters Examples */}
+                {(parameterFormat === "NAMED" && component.example?.body_text_named_params && component.example.body_text_named_params.length > 0) && (
                     <div className="mt-4 space-y-4 pt-4 border-t">
                         <div className="flex justify-between items-center">
                             <h4 className="font-medium">Example Body Variables</h4>
@@ -529,6 +684,29 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                                     placeholder={`Example for {{${example.param_name}}}`}
                                     value={example.example || ''}
                                     onChange={e => handleExampleChange(example.param_name, e.target.value)}
+                                    disabled={isLoading}
+                                />
+                            </div>
+                        ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Positional Parameters Examples */}
+                {(parameterFormat === "POSITIONAL" && component.example?.body_text && component.example.body_text[0] && component.example.body_text[0].length > 0) && (
+                    <div className="mt-4 space-y-4 pt-4 border-t">
+                        <div className="flex justify-between items-center">
+                            <h4 className="font-medium">Example Body Variables</h4>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+                        {component.example.body_text[0].map((example, i) => (
+                            <div key={i} className="space-y-2 mb-2">
+                                <Label htmlFor={`body-var-${i + 1}`}>Variable {`{{${i + 1}}}`}</Label>
+                                <Input
+                                    id={`body-var-${i + 1}`}
+                                    placeholder={`Example for {{${i + 1}}}`}
+                                    value={example || ''}
+                                    onChange={e => handleExampleChange((i + 1).toString(), e.target.value)}
                                     disabled={isLoading}
                                 />
                             </div>
@@ -870,7 +1048,13 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                   id="template-name"
                   placeholder={dict.templateNamePlaceholder}
                   value={name}
-                  onChange={(e) => setName(e.target.value.replace(/[^a-z0-9_]/g, ""))}
+                  onChange={(e) => {
+                    setName(e.target.value.replace(/[^a-z0-9_]/g, ""));
+                    // Clear API errors when user makes changes
+                    if (apiErrors.length > 0) {
+                      setApiErrors([]);
+                    }
+                  }}
                   disabled={isLoading}
                 />
                 <p className="text-sm text-muted-foreground">
@@ -880,7 +1064,13 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
               </div>
               <div className="col-span-3 space-y-2">
                 <Label htmlFor="template-language">{dict.language}</Label>
-                <Select value={language} onValueChange={setLanguage} disabled={isLoading}>
+                <Select value={language} onValueChange={(value) => {
+                  setLanguage(value);
+                  // Clear API errors when user makes changes
+                  if (apiErrors.length > 0) {
+                    setApiErrors([]);
+                  }
+                }} disabled={isLoading}>
                   <SelectTrigger id="template-language">
                     <SelectValue placeholder={dict.languagePlaceholder} />
                   </SelectTrigger>
@@ -965,10 +1155,10 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
             <AuthenticationTemplateForm onChange={handleAuthFormChange} dictionary={dict} />
           )}
 
-          {/* Meta Validation Alert - Only show user-facing errors */}
-          {(userErrors.length > 0 || userWarnings.length > 0) && (
-            <Alert variant={userErrors.length > 0 ? "destructive" : "default"}>
-              {userErrors.length > 0 ? (
+          {/* Meta Validation Alert - Show API errors and user-facing errors */}
+          {(apiErrors.length > 0 || userErrors.length > 0 || userWarnings.length > 0) && (
+            <Alert variant={apiErrors.length > 0 || userErrors.length > 0 ? "destructive" : "default"}>
+              {apiErrors.length > 0 || userErrors.length > 0 ? (
                 <AlertTriangle className="h-4 w-4" />
               ) : (
                 <Info className="h-4 w-4" />
@@ -976,16 +1166,24 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
               <AlertDescription>
                 <div className="space-y-2">
                   <div className="font-semibold">
-                    {userErrors.length > 0 ? dict.validation.pleaseFixIssues : dict.validation.templateSuggestions}
+                    {apiErrors.length > 0 || userErrors.length > 0 ? dict.validation.pleaseFixIssues : dict.validation.templateSuggestions}
                   </div>
                   <div className="space-y-1">
+                    {/* API Errors */}
+                    {apiErrors.map((error, index) => (
+                      <div key={`api-error-${index}`} className="text-sm text-red-600 dark:text-red-400">
+                        • {error}
+                      </div>
+                    ))}
+                    {/* Validation Errors */}
                     {userErrors.map((error, index) => (
-                      <div key={index} className="text-sm">
+                      <div key={`validation-error-${index}`} className="text-sm">
                         • {error.message}
                       </div>
                     ))}
+                    {/* Warnings */}
                     {userWarnings.map((warning, index) => (
-                      <div key={index} className="text-sm">
+                      <div key={`warning-${index}`} className="text-sm">
                         • {warning.message}
                       </div>
                     ))}
@@ -996,7 +1194,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
           )}
 
           {/* Success Message */}
-          {isValid && userErrors.length === 0 && userWarnings.length === 0 && name && language && category && (
+          {isValid && apiErrors.length === 0 && userErrors.length === 0 && userWarnings.length === 0 && name && language && category && (
             category === "AUTHENTICATION" 
               ? authComponents.some(c => c.type === 'BODY')
               : components.some(c => c.type === 'BODY' && c.text && c.text.trim())

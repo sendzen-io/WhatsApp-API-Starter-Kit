@@ -415,7 +415,7 @@ export interface MessageTemplate {
   status: "APPROVED" | "PENDING" | "REJECTED";
   category: "UTILITY" | "MARKETING" | "AUTHENTICATION";
   message_send_ttl_seconds?: number;
-  parameter_format?: "NAMED" | "POSITIONAL";
+  parameter_format?: "named" | "positional";
   sub_category?: string;
 }
 
