@@ -996,7 +996,11 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
           )}
 
           {/* Success Message */}
-          {isValid && userErrors.length === 0 && userWarnings.length === 0 && (name || language || category !== "MARKETING") && (
+          {isValid && userErrors.length === 0 && userWarnings.length === 0 && name && language && category && (
+            category === "AUTHENTICATION" 
+              ? authComponents.some(c => c.type === 'BODY')
+              : components.some(c => c.type === 'BODY' && c.text && c.text.trim())
+          ) && (
             <Alert>
               <CheckCircle className="h-4 w-4" />
               <AlertDescription>
