@@ -346,14 +346,14 @@ export class MetaTemplateValidator {
       ));
     }
 
-    // MARKETING templates can have up to 3 buttons
+    // MARKETING templates can have up to 10 buttons (confirmed from Meta's official UI)
     const buttonComponents = payload.components?.filter(c => c.type === 'BUTTONS') || [];
     if (buttonComponents.length > 0) {
       const totalButtons = buttonComponents.reduce((sum, comp) => sum + (comp as any).buttons?.length || 0, 0);
-      if (totalButtons > 3) {
+      if (totalButtons > 10) {
         errors.push(this.createError(
           'components',
-          'MARKETING templates can have a maximum of 3 buttons',
+          'MARKETING templates can have a maximum of 10 buttons',
           'MARKETING_TOO_MANY_BUTTONS',
           'error',
           true // User-facing
@@ -631,15 +631,8 @@ export class MetaTemplateValidator {
       return;
     }
 
-    if (component.buttons.length > 3) {
-      errors.push(this.createError(
-        field,
-        'Buttons component can have a maximum of 3 buttons',
-        'BUTTONS_TOO_MANY',
-        'error',
-        true // User-facing
-      ));
-    }
+    // Removed generic 3-button limit - category-specific validations handle button limits:
+    // MARKETING: 10 buttons, UTILITY: 3 buttons, AUTHENTICATION: 1 button
 
     component.buttons.forEach((button: any, index: number) => {
       this.validateButton(button, `${field}.buttons[${index}]`, errors, warnings);
@@ -789,7 +782,7 @@ export class MetaTemplateValidator {
       'AUTH_NO_OTP_BUTTON': 'AUTHENTICATION templates must have an OTP button',
       'AUTH_MULTIPLE_OTP_BUTTONS': 'AUTHENTICATION templates must have exactly one OTP button',
       'MARKETING_MISSING_BODY': 'MARKETING templates must have a body component',
-      'MARKETING_TOO_MANY_BUTTONS': 'MARKETING templates can have a maximum of 3 buttons',
+      'MARKETING_TOO_MANY_BUTTONS': 'MARKETING templates can have a maximum of 10 buttons',
       'UTILITY_MISSING_BODY': 'UTILITY templates must have a body component',
       'UTILITY_TOO_MANY_BUTTONS': 'UTILITY templates can have a maximum of 3 buttons',
       'MISSING_COMPONENTS': 'Template must have at least one component',
@@ -804,7 +797,7 @@ export class MetaTemplateValidator {
       'FOOTER_MISSING_TEXT': 'Footer component must have text content',
       'FOOTER_TEXT_TOO_LONG': 'Footer text is too long',
       'BUTTONS_MISSING_BUTTONS': 'Buttons component must have at least one button',
-      'BUTTONS_TOO_MANY': 'Buttons component can have a maximum of 3 buttons',
+      'BUTTONS_TOO_MANY': 'Buttons component exceeds maximum for this template category',
       'BUTTON_MISSING_TYPE': 'Button must specify type',
       'INVALID_BUTTON_TYPE': 'Invalid button type',
       'BUTTON_MISSING_TEXT': 'Button must have text',

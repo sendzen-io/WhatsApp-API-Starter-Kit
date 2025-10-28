@@ -164,7 +164,8 @@ const HeaderComponentEditor: React.FC<HeaderComponentEditorProps> = ({
                                 <SelectItem value="IMAGE">Image</SelectItem>
                                 <SelectItem value="VIDEO">Video</SelectItem>
                                 <SelectItem value="DOCUMENT">Document</SelectItem>
-                                <SelectItem value="LOCATION">Location</SelectItem>
+                                {/* <SelectItem value="LOCATION">Location</SelectItem> */}
+                                {/* Location temporarily disabled */}
                             </SelectContent>
                         </Select>
                     </div>

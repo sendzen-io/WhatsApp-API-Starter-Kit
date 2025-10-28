@@ -302,24 +302,48 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
             break;
           case "BUTTONS":
             const buttonsComponent = component as ButtonsComponent;
+            
+            // Check if buttons exist
             if (buttonsComponent.buttons.length === 0) {
               newErrors[`buttons_${index}`] = "Add at least one button or remove the Buttons component.";
-            } else if (buttonsComponent.buttons.length > 10) {
-              newErrors[`buttons_${index}`] = "You can add a maximum of 10 buttons.";
             }
             
-            const buttonTypes = buttonsComponent.buttons.map(b => b.type === 'QUICK_REPLY' ? 'QR' : 'OTHER');
-            let transitions = 0;
-            for (let i = 1; i < buttonTypes.length; i++) {
-              if (buttonTypes[i] !== buttonTypes[i - 1]) {
-                transitions++;
+            // Count button types
+            const quickReplyCount = buttonsComponent.buttons.filter(b => b.type === 'QUICK_REPLY').length;
+            const urlCount = buttonsComponent.buttons.filter(b => b.type === 'URL').length;
+            const phoneCount = buttonsComponent.buttons.filter(b => b.type === 'PHONE_NUMBER').length;
+            
+            // WhatsApp Button Type Limits Validation
+            if (quickReplyCount > 10) {
+              newErrors[`buttons_${index}`] = "Maximum 10 Quick Reply buttons allowed per template.";
+            }
+            if (urlCount > 2) {
+              newErrors[`buttons_${index}`] = "Maximum 2 URL buttons allowed per template.";
+            }
+            if (phoneCount > 1) {
+              newErrors[`buttons_${index}`] = "Maximum 1 Phone Number button allowed per template.";
+            }
+            
+            // WhatsApp Button Ordering Validation: Quick Reply buttons must be grouped together
+            // Valid: Quick Reply, Quick Reply, URL, Phone
+            // Valid: URL, Phone, Quick Reply, Quick Reply
+            // Invalid: Quick Reply, URL, Quick Reply
+            if (buttonsComponent.buttons.length > 0) {
+              const buttonTypes = buttonsComponent.buttons.map(b => b.type === 'QUICK_REPLY' ? 'QR' : 'OTHER');
+              let transitions = 0;
+              for (let i = 1; i < buttonTypes.length; i++) {
+                if (buttonTypes[i] !== buttonTypes[i - 1]) {
+                  transitions++;
+                }
+              }
+              if (transitions > 1) {
+                newErrors[`buttons_${index}`] = "Invalid button order. Quick Reply buttons must be grouped together and cannot be mixed with other button types.";
               }
             }
-            if (transitions > 1) {
-              newErrors[`buttons_${index}`] = "Invalid button order. Quick Reply buttons must be grouped together.";
-            }
             
+            // Individual button field validation
             buttonsComponent.buttons.forEach((button, btnIndex) => {
+              // Button Text Validation (required, max 25 chars)
               if ('text' in button) {
                 if (!button.text || !button.text.trim()) {
                   newErrors[`button_${index}_${btnIndex}_text`] = "Button text is required.";
@@ -328,13 +352,17 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                 }
               }
 
+              // URL Button Validation
               if (button.type === "URL") {
                 if (!button.url || !button.url.trim()) {
                   newErrors[`button_${index}_${btnIndex}_url`] = "URL is required.";
                 } else if (button.url.length > 2000) {
                   newErrors[`button_${index}_${btnIndex}_url`] = "URL cannot exceed 2000 characters.";
                 }
-              } else if (button.type === "PHONE_NUMBER") {
+              }
+              
+              // Phone Number Button Validation
+              else if (button.type === "PHONE_NUMBER") {
                 if (!button.phone_number || !button.phone_number.trim()) {
                   newErrors[`button_${index}_${btnIndex}_phone`] = "Phone number is required.";
                 } else if (button.phone_number.length > 20) {
@@ -802,7 +830,14 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
       <Card key={pIndex} id={`buttons-${pIndex}`}>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>Buttons</CardTitle>
+            <div className="flex-1">
+              <CardTitle>Buttons</CardTitle>
+              <CardDescription className="mt-1">
+                <p className="text-xs text-muted-foreground">
+                  WhatsApp limits: Quick Reply (max 10), URL (max 2), Phone (max 1). Quick Reply buttons must be grouped together.
+                </p>
+              </CardDescription>
+            </div>
             <div className="flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -814,21 +849,21 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                 <DropdownMenuContent>
                   <DropdownMenuItem
                     onClick={() => addButton("QUICK_REPLY")}
-                    disabled={quickReplyCount >= 10 || component.buttons.length >= 10}
+                    disabled={quickReplyCount >= 10}
                   >
-                    Quick Reply
+                    Quick Reply {quickReplyCount > 0 && `(${quickReplyCount}/10)`}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => addButton("URL")}
-                    disabled={urlCount >= 2 || component.buttons.length >= 10}
+                    disabled={urlCount >= 2}
                   >
-                    Visit Website
+                    Visit Website {urlCount > 0 && `(${urlCount}/2)`}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => addButton("PHONE_NUMBER")}
-                    disabled={phoneCount >= 1 || component.buttons.length >= 10}
+                    disabled={phoneCount >= 1}
                   >
-                    Call Phone Number
+                    Call Phone Number {phoneCount > 0 && `(1/1)`}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -849,21 +884,17 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
               (_, i) => i !== index
             );
 
-            const disableQuickReply =
-              otherButtons.some(
-                (b) => b.type === "URL" || b.type === "PHONE_NUMBER"
-              ) ||
-              (component.buttons.filter((b) => b.type === "QUICK_REPLY")
-                .length >= 3 &&
-                button.type !== "QUICK_REPLY");
-
-            const disableUrl =
-              otherButtons.some((b) => b.type === "QUICK_REPLY") ||
-              otherButtons.some((b) => b.type === "URL");
-
-            const disablePhone =
-              otherButtons.some((b) => b.type === "QUICK_REPLY") ||
-              otherButtons.some((b) => b.type === "PHONE_NUMBER");
+            // Determine button groups: Quick Reply vs Other (URL, Phone)
+            const hasQuickReply = otherButtons.some((b) => b.type === "QUICK_REPLY");
+            const hasOtherButtons = otherButtons.some((b) => b.type === "URL" || b.type === "PHONE_NUMBER");
+            const currentQuickReplyCount = component.buttons.filter((b) => b.type === "QUICK_REPLY").length;
+            
+            // WhatsApp Button Grouping Rules:
+            // - Quick Reply buttons must be grouped together (all at start or all at end)
+            // - Cannot mix Quick Reply with Other button types
+            const disableQuickReply = hasOtherButtons || (hasQuickReply && currentQuickReplyCount >= 10);
+            const disableUrl = hasQuickReply || urlCount >= 2;
+            const disablePhone = hasQuickReply || phoneCount >= 1;
 
             return (
               <Card key={index} className="p-4">

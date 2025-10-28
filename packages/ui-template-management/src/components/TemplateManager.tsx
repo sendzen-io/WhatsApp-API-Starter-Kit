@@ -200,7 +200,7 @@ export interface TemplateManagerDictionary {
 interface TemplateManagerProps {
   templates: MessageTemplate[]; // This will be the filtered list
   stats: {
-    total: number;
+    total: number | string; // Can be number or string like "50+"
     approved: number;
     pending: number;
     rejected: number;
@@ -458,6 +458,13 @@ function TemplateCard({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Reset media state when template changes (for pagination)
+  useEffect(() => {
+    setMediaError(false);
+    setMediaLoaded(false);
+    setIsVideoPlaying(false);
+  }, [template.id]);
 
   if (!mounted) {
     return (
@@ -762,7 +769,7 @@ function TemplateCard({
             buttonsComponent.buttons.length > 0 && (
               <div className="flex-shrink-0 mt-4 space-y-2 template-buttons-section">
                 <Separator className="template-buttons-separator" />
-                <div className="space-y-1.5 template-buttons-container overflow-y-auto">
+                <div className="space-y-1.5 template-buttons-container overflow-y-auto max-h-[200px]">
                   {buttonsComponent.buttons.map((button, index) => (
                     <div
                       key={index}
@@ -1206,9 +1213,9 @@ const TemplateManager: React.FC<TemplateManagerProps> = ({
           </Card>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 template-grid items-stretch">
-            {templates.map((template) => (
+            {templates.map((template, index) => (
               <TemplateCard
-                key={template.id}
+                key={`${template.id}-${index}`}
                 template={template}
                 isDeleting={deletingTemplateId === template.id}
                 onPreview={onPreview}

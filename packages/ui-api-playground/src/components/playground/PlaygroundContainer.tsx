@@ -411,6 +411,7 @@ export default function PlaygroundContainer({
   const [wabaError, setWabaError] = useState<string | null>(null);
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
   const [projectApiKeyCache, setProjectApiKeyCache] = useState<Record<string, string>>({});
+  const autoSelectEnabledRef = useRef(true); // Track if we should auto-select first template
   
   // New state for step-by-step flow (API Playground only)
   const [businesses, setBusinesses] = useState<Array<{id: string, name: string}>>([]);
@@ -629,6 +630,7 @@ export default function PlaygroundContainer({
         selectedTemplate: '',
         templatePlaceholders: {}
       }));
+      autoSelectEnabledRef.current = true; // Reset auto-select for next fetch
     } finally {
       setTemplatesLoading(false);
     }
@@ -762,6 +764,7 @@ export default function PlaygroundContainer({
         setWabasForBusiness([]);
         setWabaOptions([]);
         setFacebookTemplates([]);
+        autoSelectEnabledRef.current = true; // Reset auto-select
       }
     } else {
       // For Product project (SendZen API), fetch immediately (uses existing auth)
@@ -783,6 +786,7 @@ export default function PlaygroundContainer({
         templatePlaceholders: {}
       }));
       setFacebookTemplates([]);
+      autoSelectEnabledRef.current = true; // Enable auto-select for new business
     }
   }, [config.selectedBusiness, apiEndpoint, fetchWABAsForBusiness]);
 
@@ -801,14 +805,20 @@ export default function PlaygroundContainer({
         selectedTemplate: '',
         templatePlaceholders: {}
       }));
+      // Enable auto-select for new templates
+      autoSelectEnabledRef.current = true;
       fetchMessageTemplates();
     }
   }, [config.wabaId, fetchMessageTemplates]);
 
   // Auto-select first template if none selected
   useEffect(() => {
-    if (facebookTemplates.length > 0 && !config.selectedTemplate && facebookTemplates[0]) {
-      handleTemplateChange(facebookTemplates[0].id);
+    if (facebookTemplates.length > 0 && !config.selectedTemplate && autoSelectEnabledRef.current) {
+      const firstTemplate = facebookTemplates[0];
+      if (firstTemplate) {
+        autoSelectEnabledRef.current = false; // Disable auto-select after first selection
+        handleTemplateChange(firstTemplate.id);
+      }
     }
   }, [facebookTemplates, config.selectedTemplate, handleTemplateChange]);
 
@@ -1750,18 +1760,20 @@ curl -X POST '${url}' \\
               )}
               
               {/* Test API Call Button */}
-              <div className="mt-2 pt-2 border-t border-border">
-                <Button 
-                  onClick={handleTestApiCall} 
-                  variant="success"
-                  className="w-full" 
-                  size="sm"
-                  disabled={isLoading}
-                >
-                  <Play className="h-3 w-3 mr-1" />
-                  {isLoading ? 'Sending...' : 'Test API Call'}
-                </Button>
-              </div>
+              {config.selectedTemplate && (
+                <div className="mt-2 pt-2 border-t border-border">
+                  <Button 
+                    onClick={handleTestApiCall} 
+                    variant="success"
+                    className="w-full" 
+                    size="sm"
+                    disabled={isLoading}
+                  >
+                    <Play className="h-3 w-3 mr-1" />
+                    {isLoading ? 'Sending...' : 'Test API Call'}
+                  </Button>
+                </div>
+              )}
             </BoxContent>
           </Box>
         </div>
@@ -1888,11 +1900,14 @@ curl -X POST '${url}' \\
                         if (apiEndpoint === 'facebook') {
                           // For API Playground: value format is "wabaId-phoneNumberId"
                           const [wabaId, phoneNumberId] = value.split('-');
+                          autoSelectEnabledRef.current = true; // Enable auto-select for new WABA selection
                           setConfig(prev => ({ 
                             ...prev, 
                             selectedWaba: value,
                             wabaId: wabaId || '',
-                            phoneNumberId: phoneNumberId || ''
+                            phoneNumberId: phoneNumberId || '',
+                            selectedTemplate: '', // Clear template selection
+                            templatePlaceholders: {} // Clear placeholders
                           }));
                         } else {
                           // For Product project: existing logic
@@ -1904,11 +1919,14 @@ curl -X POST '${url}' \\
                             accessToken = await getProjectApiKey(selectedWaba.projectId);
                           }
                           
+                          autoSelectEnabledRef.current = true; // Enable auto-select for new WABA selection
                           setConfig(prev => ({ 
                             ...prev, 
                             selectedWaba: value,
                             wabaId: selectedWaba?.wabaId || '',
-                            accessToken: accessToken
+                            accessToken: accessToken,
+                            selectedTemplate: '', // Clear template selection
+                            templatePlaceholders: {} // Clear placeholders
                           }));
                         }
                       }}
@@ -2053,9 +2071,6 @@ curl -X POST '${url}' \\
               </div>
               
               <hr className="border-border" />
-            
-              <hr className="border-border" />
-            
               {/* Message Template */}
               <div className="config-section">
                 <h3 className="flex items-center gap-2 text-base font-semibold mb-2 whitespace-nowrap">
@@ -2094,10 +2109,55 @@ curl -X POST '${url}' \\
                     </div>
                   ) : (
                     <>
-                      <Select
-                        value={config.selectedTemplate}
-                        onValueChange={(value) => {
-                          handleTemplateChange(value);
+                      {config.wabaId && facebookTemplates.length === 0 ? (
+                        // Empty state when WABA has no templates
+                        <div className="border-2 border-dashed border-border rounded-lg p-6 space-y-4 mt-4">
+                          <div className="flex flex-col items-center text-center space-y-3">
+                            <div className="relative">
+                              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
+                                <FileText className="w-8 h-8 text-muted-foreground" />
+                              </div>
+                              <div className="absolute -top-1 -right-1 w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center">
+                                <MessageSquare className="w-3 h-3 text-primary" />
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <h4 className="text-base font-semibold text-foreground">
+                                No Templates Found
+                              </h4>
+                              <p className="text-sm text-muted-foreground max-w-md">
+                                {apiEndpoint === 'sendzen' 
+                                  ? "This WABA doesn't have any approved message templates yet. Click 'Create Template' to create your first template."
+                                  : "This WABA doesn't have any approved message templates yet. Create templates in Meta's Business Manager or via the Template Management page."}
+                              </p>
+                            </div>
+                            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  if (apiEndpoint === 'sendzen') {
+                                    // Product context: navigate to our template creation page
+                                    window.location.href = '/templates/create';
+                                  } else {
+                                    // API Playground context: open Meta Business Manager
+                                    window.open('https://business.facebook.com/wa/manage/message-templates/', '_blank');
+                                  }
+                                }}
+                                className="gap-2"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                                {apiEndpoint === 'sendzen' ? 'Create Template' : 'Create in Meta'}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <Select
+                            value={config.selectedTemplate}
+                            onValueChange={(value) => {
+                              handleTemplateChange(value);
                           // Clear API validation error for template selection
                           setApiValidationErrors(prev => {
                             const newErrors = { ...prev };
@@ -2148,17 +2208,15 @@ curl -X POST '${url}' \\
                           <span>{apiValidationErrors.selectedTemplate}</span>
                         </div>
                       )}
-                      {facebookTemplates.length > 0 && (
-                        <div className="text-sm text-muted-foreground">
-                          Found {facebookTemplates.length} template{facebookTemplates.length !== 1 ? 's' : ''} for this WABA
-                        </div>
+                      <hr className="border-border my-4" />
+                        </>
                       )}
                     </>
                   )}
                 </div>
               
               {/* WhatsApp Template Preview */}
-              {config.selectedTemplate && (
+              {config.selectedTemplate && facebookTemplates.length > 0 && (
                 <div className="template-preview mb-2">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-sm font-medium flex items-center gap-2 whitespace-nowrap">
@@ -2206,6 +2264,7 @@ curl -X POST '${url}' \\
 
               {/* Placeholder Editor - Only show when template is selected and templates loaded successfully */}
               {config.selectedTemplate && 
+               facebookTemplates.length > 0 &&
                !templatesLoading && 
                !templatesError && 
                Object.keys(config.templatePlaceholders).length > 0 && (
