@@ -73,6 +73,7 @@ export interface PaginationInfo {
     before: string;
     after: string;
   };
+  previous?: string;
   next?: string;
   hasNextPage: boolean;
   hasPreviousPage: boolean;
@@ -252,7 +253,7 @@ const fallbackDictionary: TemplateManagerDictionary = {
     total_templates: "Total Templates",
     approved: "Approved",
     pending: "Pending",
-    templates_count: "Templates ({count})",
+    templates_count: "Templates",
     no_templates_found: "No templates found",
     no_templates_desc:
       "Get started by creating your first WhatsApp message template",
@@ -914,10 +915,10 @@ function PaginationControls({
   const dict = dictionary;
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 template-pagination">
-      <div className="text-sm text-muted-foreground template-pagination-info">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 template-pagination">
+      {/* <div className="text-sm text-muted-foreground template-pagination-info">
         {dict.templates.pagination.showing} {currentTemplatesCount} {dict.templates.pagination.of} {totalTemplates} {dict.templates.pagination.templates}
-      </div>
+      </div> */}
       
       <div className="flex items-center gap-2 template-pagination-controls">
         <Button
@@ -935,7 +936,7 @@ function PaginationControls({
           variant="outline"
           size="sm"
           onClick={onNextPage}
-          disabled={!pagination.hasNextPage}
+          disabled={!pagination.hasNextPage && !pagination.hasPreviousPage ? false : !pagination.hasNextPage ? true : false}
           className="gap-2"
         >
           {dict.templates.pagination.next}
@@ -1179,11 +1180,16 @@ const TemplateManager: React.FC<TemplateManagerProps> = ({
       <div className="space-y-6 template-grid-section">
         <div className="flex items-center justify-between template-grid-header">
           <h2 className="text-xl font-semibold template-grid-title">
-            {dict.templates.templates_count.replace(
-              "{count}",
-              templates.length.toString()
-            )}
+            {dict.templates.templates_count}
           </h2>
+          <PaginationControls
+          pagination={pagination}
+          currentTemplatesCount={templates.length}
+          totalTemplates={totalTemplates}
+          onNextPage={onNextPage}
+          onPreviousPage={onPreviousPage}
+          dictionary={dict}
+        />
         </div>
 
         {totalTemplates > 0 && templates.length === 0 ? (
@@ -1229,14 +1235,14 @@ const TemplateManager: React.FC<TemplateManagerProps> = ({
         )}
         
         {/* Pagination Controls */}
-        <PaginationControls
+        {/* <PaginationControls
           pagination={pagination}
           currentTemplatesCount={templates.length}
           totalTemplates={totalTemplates}
           onNextPage={onNextPage}
           onPreviousPage={onPreviousPage}
           dictionary={dict}
-        />
+        /> */}
       </div>
     </div>
   );

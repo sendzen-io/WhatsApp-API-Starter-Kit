@@ -455,7 +455,6 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
   };
 
   const handleSubmit = async () => {
-    debugger;
     setIsSubmittedOnce(true);
     const newErrors = validate();
     const isFormValid = Object.keys(newErrors).length === 0;
