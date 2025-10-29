@@ -125,7 +125,7 @@ const FilePreview: React.FC<FilePreviewProps> = ({
               <div className="flex items-center space-x-2">
                 {getFileIcon()}
                 <div>
-                  <p className="text-sm font-medium text-gray-900 truncate max-w-[200px]">
+                  <p className="text-sm font-medium truncate max-w-[200px]">
                     {file.name}
                   </p>
                   <p className="text-xs text-gray-500">
