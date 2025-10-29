@@ -312,6 +312,12 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
             const quickReplyCount = buttonsComponent.buttons.filter(b => b.type === 'QUICK_REPLY').length;
             const urlCount = buttonsComponent.buttons.filter(b => b.type === 'URL').length;
             const phoneCount = buttonsComponent.buttons.filter(b => b.type === 'PHONE_NUMBER').length;
+            const totalButtonCount = buttonsComponent.buttons.length;
+            
+            // WhatsApp Button Total Limit Validation
+            if (totalButtonCount > 10) {
+              newErrors[`buttons_${index}`] = "Maximum 10 buttons allowed per template.";
+            }
             
             // WhatsApp Button Type Limits Validation
             if (quickReplyCount > 10) {
@@ -324,20 +330,28 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
               newErrors[`buttons_${index}`] = "Maximum 1 Phone Number button allowed per template.";
             }
             
-            // WhatsApp Button Ordering Validation: Quick Reply buttons must be grouped together
-            // Valid: Quick Reply, Quick Reply, URL, Phone
-            // Valid: URL, Phone, Quick Reply, Quick Reply
-            // Invalid: Quick Reply, URL, Quick Reply
+            // WhatsApp Button Ordering Validation: Buttons of the same type must be grouped together
+            // Valid: QR, QR, QR, URL, URL, CALL
+            // Valid: URL, URL, CALL, QR, QR
+            // Invalid: QR, URL, QR (interrupted QR group)
             if (buttonsComponent.buttons.length > 0) {
-              const buttonTypes = buttonsComponent.buttons.map(b => b.type === 'QUICK_REPLY' ? 'QR' : 'OTHER');
+              const buttonTypes = buttonsComponent.buttons.map(b => {
+                if (b.type === 'QUICK_REPLY') return 'QR';
+                if (b.type === 'URL') return 'URL';
+                return 'CALL';
+              });
+              
               let transitions = 0;
               for (let i = 1; i < buttonTypes.length; i++) {
                 if (buttonTypes[i] !== buttonTypes[i - 1]) {
                   transitions++;
                 }
               }
-              if (transitions > 1) {
-                newErrors[`buttons_${index}`] = "Invalid button order. Quick Reply buttons must be grouped together and cannot be mixed with other button types.";
+              
+              // With 3 button types (QR, URL, CALL), max valid transitions is 2
+              // Example: QR group -> URL group -> CALL group = 2 transitions
+              if (transitions > 2) {
+                newErrors[`buttons_${index}`] = "Invalid button order. Buttons of the same type must be grouped together. Example: [QR, QR, URL, URL, CALL] is valid, but [QR, URL, QR] is invalid.";
               }
             }
             
@@ -788,7 +802,60 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
       else if (type === "PHONE_NUMBER")
         newButton = { type: "PHONE_NUMBER", text: "", phone_number: "" };
       else newButton = { type: "QUICK_REPLY", text: "" };
-      updateButtons([...component.buttons, newButton]);
+      
+      // Smart insertion: Automatically place new button in the correct group to maintain sequence
+      const buttons = component.buttons;
+      
+      // Define button type order (QR → URL → CALL)
+      const getTypeOrder = (btnType: string) => {
+        if (btnType === "QUICK_REPLY") return 0;
+        if (btnType === "URL") return 1;
+        return 2; // PHONE_NUMBER
+      };
+      
+      let insertIndex = buttons.length; // Default: add at the end
+      
+      if (buttons.length === 0) {
+        // No buttons yet, just add it
+        insertIndex = 0;
+      } else {
+        // Strategy: Always find the group of the same type and insert at the end of that group
+        let foundGroup = false;
+        
+        for (let i = 0; i < buttons.length; i++) {
+          // If we found a button of the same type, insert at the end of that group
+          if (buttons[i].type === type) {
+            let j = i;
+            while (j < buttons.length && buttons[j].type === type) {
+              j++;
+            }
+            insertIndex = j;
+            foundGroup = true;
+            break;
+          }
+        }
+        
+        // If we didn't find any buttons of this type, insert at the appropriate position based on type order
+        if (!foundGroup) {
+          const newTypeOrder = getTypeOrder(type);
+          
+          for (let i = 0; i < buttons.length; i++) {
+            const currentTypeOrder = getTypeOrder(buttons[i].type);
+            
+            // If current button has higher order (comes later), insert before it
+            if (currentTypeOrder > newTypeOrder) {
+              insertIndex = i;
+              break;
+            }
+          }
+          // If we never found a higher order button, insertIndex remains buttons.length (at end)
+        }
+      }
+      
+      // Insert the button at the calculated position
+      const newButtons = [...buttons];
+      newButtons.splice(insertIndex, 0, newButton);
+      updateButtons(newButtons);
     };
 
     const removeButton = (btnIndex: number) => {
@@ -808,9 +875,58 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
       
       if (temp === undefined || button2 === undefined) return;
       
-      newButtons[index1] = button2;
-      newButtons[index2] = temp;
-      updateButtons(newButtons);
+      // If both buttons are the same type, swapping won't change grouping - always allow
+      if (temp.type === button2.type) {
+        newButtons[index1] = button2;
+        newButtons[index2] = temp;
+        updateButtons(newButtons);
+        return;
+      }
+      
+      // Different types: Swap entire groups to maintain valid grouping
+      // Step 1: Find which groups the buttons belong to
+      const findGroupBounds = (index: number) => {
+        const type = component.buttons[index].type;
+        let start = index;
+        let end = index;
+        
+        while (start > 0 && component.buttons[start - 1].type === type) {
+          start--;
+        }
+        while (end < component.buttons.length - 1 && component.buttons[end + 1].type === type) {
+          end++;
+        }
+        return { start, end };
+      };
+      
+      const group1 = findGroupBounds(index1);
+      const group2 = findGroupBounds(index2);
+      
+      // Step 2: Swap the entire groups
+      const resultButtons: TemplateButton[] = [];
+      
+      // Determine which group comes first
+      if (group1.start < group2.start) {
+        // Group1 before Group2: [..., group1, ..., group2, ...] -> [..., group2, ..., group1, ...]
+        resultButtons.push(...component.buttons.slice(0, group1.start));
+        resultButtons.push(...component.buttons.slice(group2.start, group2.end + 1));
+        if (group1.end + 1 < group2.start) {
+          resultButtons.push(...component.buttons.slice(group1.end + 1, group2.start));
+        }
+        resultButtons.push(...component.buttons.slice(group1.start, group1.end + 1));
+        resultButtons.push(...component.buttons.slice(group2.end + 1));
+      } else {
+        // Group2 before Group1: [..., group2, ..., group1, ...] -> [..., group1, ..., group2, ...]
+        resultButtons.push(...component.buttons.slice(0, group2.start));
+        resultButtons.push(...component.buttons.slice(group1.start, group1.end + 1));
+        if (group2.end + 1 < group1.start) {
+          resultButtons.push(...component.buttons.slice(group2.end + 1, group1.start));
+        }
+        resultButtons.push(...component.buttons.slice(group2.start, group2.end + 1));
+        resultButtons.push(...component.buttons.slice(group1.end + 1));
+      }
+      
+      updateButtons(resultButtons);
     };
 
     const hasQuickReply = component.buttons.some(
@@ -825,6 +941,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
     const phoneCount = component.buttons.filter(
       (b) => b.type === "PHONE_NUMBER"
     ).length;
+    const totalButtonCount = component.buttons.length;
 
     return (
       <Card key={pIndex} id={`buttons-${pIndex}`}>
@@ -834,7 +951,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
               <CardTitle>Buttons</CardTitle>
               <CardDescription className="mt-1">
                 <p className="text-xs text-muted-foreground">
-                  WhatsApp limits: Quick Reply (max 10), URL (max 2), Phone (max 1). Quick Reply buttons must be grouped together.
+                  Maximum 10 buttons total. Quick Reply (max 10), URL (max 2), Phone (max 1). Buttons automatically group by type. Swapping moves entire button groups to maintain proper sequence.
                 </p>
               </CardDescription>
             </div>
@@ -849,19 +966,19 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                 <DropdownMenuContent>
                   <DropdownMenuItem
                     onClick={() => addButton("QUICK_REPLY")}
-                    disabled={quickReplyCount >= 10}
+                    disabled={quickReplyCount >= 10 || totalButtonCount >= 10}
                   >
                     Quick Reply {quickReplyCount > 0 && `(${quickReplyCount}/10)`}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => addButton("URL")}
-                    disabled={urlCount >= 2}
+                    disabled={urlCount >= 2 || totalButtonCount >= 10}
                   >
                     Visit Website {urlCount > 0 && `(${urlCount}/2)`}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => addButton("PHONE_NUMBER")}
-                    disabled={phoneCount >= 1}
+                    disabled={phoneCount >= 1 || totalButtonCount >= 10}
                   >
                     Call Phone Number {phoneCount > 0 && `(1/1)`}
                   </DropdownMenuItem>
@@ -884,17 +1001,42 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
               (_, i) => i !== index
             );
 
-            // Determine button groups: Quick Reply vs Other (URL, Phone)
-            const hasQuickReply = otherButtons.some((b) => b.type === "QUICK_REPLY");
-            const hasOtherButtons = otherButtons.some((b) => b.type === "URL" || b.type === "PHONE_NUMBER");
             const currentQuickReplyCount = component.buttons.filter((b) => b.type === "QUICK_REPLY").length;
             
-            // WhatsApp Button Grouping Rules:
-            // - Quick Reply buttons must be grouped together (all at start or all at end)
-            // - Cannot mix Quick Reply with Other button types
-            const disableQuickReply = hasOtherButtons || (hasQuickReply && currentQuickReplyCount >= 10);
-            const disableUrl = hasQuickReply || urlCount >= 2;
-            const disablePhone = hasQuickReply || phoneCount >= 1;
+            // Check if buttons are properly grouped (same types are contiguous)
+            const hasProperGrouping = () => {
+              if (component.buttons.length === 0) return true;
+              const buttonTypes = component.buttons.map(b => b.type === 'QUICK_REPLY' ? 'QR' : (b.type === 'URL' ? 'URL' : 'CALL'));
+              let transitions = 0;
+              for (let i = 1; i < buttonTypes.length; i++) {
+                if (buttonTypes[i] !== buttonTypes[i - 1]) {
+                  transitions++;
+                }
+              }
+              // Valid grouping: transitions should be at most the number of distinct groups - 1
+              // If all types are properly grouped, we should have minimal transitions
+              return transitions <= 2; // Allow: QR group, URL group, CALL group = 2 transitions max
+            };
+            
+            // Simulate changing the current button type and check if it maintains proper grouping
+            const wouldMaintainGrouping = (newType: string) => {
+              const simulatedButtons = [...component.buttons];
+              simulatedButtons[index] = { ...button, type: newType } as any;
+              
+              const buttonTypes = simulatedButtons.map(b => b.type === 'QUICK_REPLY' ? 'QR' : (b.type === 'URL' ? 'URL' : 'CALL'));
+              let transitions = 0;
+              for (let i = 1; i < buttonTypes.length; i++) {
+                if (buttonTypes[i] !== buttonTypes[i - 1]) {
+                  transitions++;
+                }
+              }
+              // Max transitions for 3 button types is 2 (e.g., QR -> URL -> CALL)
+              return transitions <= 2;
+            };
+            
+            const disableQuickReply = !wouldMaintainGrouping('QUICK_REPLY') || currentQuickReplyCount >= 10;
+            const disableUrl = !wouldMaintainGrouping('URL') || urlCount >= 2;
+            const disablePhone = !wouldMaintainGrouping('PHONE_NUMBER') || phoneCount >= 1;
 
             return (
               <Card key={index} className="p-4">
