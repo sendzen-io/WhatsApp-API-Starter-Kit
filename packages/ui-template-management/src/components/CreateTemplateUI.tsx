@@ -824,9 +824,9 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
         
         for (let i = 0; i < buttons.length; i++) {
           // If we found a button of the same type, insert at the end of that group
-          if (buttons[i].type === type) {
+          if (buttons[i] && buttons[i]?.type === type) {
             let j = i;
-            while (j < buttons.length && buttons[j].type === type) {
+            while (j < buttons.length && buttons[j] && buttons[j]?.type === type) {
               j++;
             }
             insertIndex = j;
@@ -840,7 +840,8 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
           const newTypeOrder = getTypeOrder(type);
           
           for (let i = 0; i < buttons.length; i++) {
-            const currentTypeOrder = getTypeOrder(buttons[i].type);
+            if (!buttons[i]) continue;
+            const currentTypeOrder = getTypeOrder(buttons[i]?.type || "");
             
             // If current button has higher order (comes later), insert before it
             if (currentTypeOrder > newTypeOrder) {
@@ -853,7 +854,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
       }
       
       // Insert the button at the calculated position
-      const newButtons = [...buttons];
+      const newButtons: TemplateButton[] = [...buttons];
       newButtons.splice(insertIndex, 0, newButton);
       updateButtons(newButtons);
     };
@@ -886,14 +887,16 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
       // Different types: Swap entire groups to maintain valid grouping
       // Step 1: Find which groups the buttons belong to
       const findGroupBounds = (index: number) => {
-        const type = component.buttons[index].type;
+        const button = component.buttons[index];
+        if (!button) return { start: index, end: index };
+        const type = button.type;
         let start = index;
         let end = index;
         
-        while (start > 0 && component.buttons[start - 1].type === type) {
+        while (start > 0 && component.buttons[start - 1]?.type === type) {
           start--;
         }
-        while (end < component.buttons.length - 1 && component.buttons[end + 1].type === type) {
+        while (end < component.buttons.length - 1 && component.buttons[end + 1]?.type === type) {
           end++;
         }
         return { start, end };
