@@ -188,10 +188,15 @@ const WhatsAppTemplatePreview = ({
 
     if (headerComponent.format === 'TEXT' && headerComponent.text) {
       // Text header
-      const headerText = headerComponent.text.replace(/\{\{(\d+)\}\}/g, (match, num) => {
-        const placeholderKey = `header_param_${num}`;
-        return placeholders[placeholderKey] || match;
-      });
+      const headerText = headerComponent.text
+        .replace(/\{\{(\d+)\}\}/g, (match, num) => {
+          const placeholderKey = `header_param_${num}`;
+          return placeholders[placeholderKey] || match;
+        })
+        .replace(/\{\{([A-Za-z_][\w]*)\}\}/g, (match, name) => {
+          const placeholderKey = `header_param_${name}`;
+          return placeholders[placeholderKey] || match;
+        });
 
       return (
         <div className="p-3 pb-2">
@@ -261,10 +266,15 @@ const WhatsAppTemplatePreview = ({
     const bodyComponent = template.components.find(c => c.type === 'BODY');
     if (!bodyComponent?.text) return null;
 
-    const bodyText = bodyComponent.text.replace(/\{\{(\d+)\}\}/g, (match, num) => {
-      const placeholderKey = `body_param_${num}`;
-      return placeholders[placeholderKey] || match;
-    });
+    const bodyText = bodyComponent.text
+      .replace(/\{\{(\d+)\}\}/g, (match, num) => {
+        const placeholderKey = `body_param_${num}`;
+        return placeholders[placeholderKey] || match;
+      })
+      .replace(/\{\{([A-Za-z_][\w]*)\}\}/g, (match, name) => {
+        const placeholderKey = `body_param_${name}`;
+        return placeholders[placeholderKey] || match;
+      });
 
     return (
       <div className="px-3 pb-2">
@@ -300,24 +310,39 @@ const WhatsAppTemplatePreview = ({
 
           // Replace dynamic parameters in button text/URL/phone
           if (buttonText) {
-            buttonText = buttonText.replace(/\{\{(\d+)\}\}/g, (match, num) => {
-              const placeholderKey = `button_${index}_param_${num}`;
-              return placeholders[placeholderKey] || match;
-            });
+            buttonText = buttonText
+              .replace(/\{\{(\d+)\}\}/g, (match, num) => {
+                const placeholderKey = `button_${index}_param_${num}`;
+                return placeholders[placeholderKey] || match;
+              })
+              .replace(/\{\{([A-Za-z_][\w]*)\}\}/g, (match, name) => {
+                const placeholderKey = `button_${index}_param_${name}`;
+                return placeholders[placeholderKey] || match;
+              });
           }
 
           if (buttonUrl) {
-            buttonUrl = buttonUrl.replace(/\{\{(\d+)\}\}/g, (match, num) => {
-              const placeholderKey = `button_${index}_param_${num}`;
-              return placeholders[placeholderKey] || match;
-            });
+            buttonUrl = buttonUrl
+              .replace(/\{\{(\d+)\}\}/g, (match, num) => {
+                const placeholderKey = `button_${index}_param_${num}`;
+                return placeholders[placeholderKey] || match;
+              })
+              .replace(/\{\{([A-Za-z_][\w]*)\}\}/g, (match, name) => {
+                const placeholderKey = `button_${index}_param_${name}`;
+                return placeholders[placeholderKey] || match;
+              });
           }
 
           if (buttonPhone) {
-            buttonPhone = buttonPhone.replace(/\{\{(\d+)\}\}/g, (match, num) => {
-              const placeholderKey = `button_${index}_param_${num}`;
-              return placeholders[placeholderKey] || match;
-            });
+            buttonPhone = buttonPhone
+              .replace(/\{\{(\d+)\}\}/g, (match, num) => {
+                const placeholderKey = `button_${index}_param_${num}`;
+                return placeholders[placeholderKey] || match;
+              })
+              .replace(/\{\{([A-Za-z_][\w]*)\}\}/g, (match, name) => {
+                const placeholderKey = `button_${index}_param_${name}`;
+                return placeholders[placeholderKey] || match;
+              });
           }
 
           return (
@@ -668,22 +693,40 @@ export default function PlaygroundContainer({
       
       // Check for dynamic placeholders in HEADER component
       if (component.type === 'HEADER' && component.text) {
-        const headerPlaceholders = component.text.match(/\{\{(\d+)\}\}/g);
-        if (headerPlaceholders) {
-          headerPlaceholders.forEach(match => {
+        // Positional: {{1}}
+        const headerPositional = component.text.match(/\{\{(\d+)\}\}/g);
+        if (headerPositional) {
+          headerPositional.forEach(match => {
             const paramNumber = match.match(/\{\{(\d+)\}\}/)?.[1] || '1';
             newPlaceholders[`header_param_${paramNumber}`] = '';
+          });
+        }
+        // Named: {{first_name}}
+        const headerNamed = component.text.match(/\{\{([A-Za-z_][\w]*)\}\}/g);
+        if (headerNamed) {
+          headerNamed.forEach(match => {
+            const name = match.match(/\{\{([A-Za-z_][\w]*)\}\}/)?.[1] || '';
+            if (name) newPlaceholders[`header_param_${name}`] = '';
           });
         }
       }
       
       // Check for dynamic placeholders in BODY component
       if (component.type === 'BODY' && component.text) {
-        const bodyPlaceholders = component.text.match(/\{\{(\d+)\}\}/g);
-        if (bodyPlaceholders) {
-          bodyPlaceholders.forEach(match => {
+        // Positional: {{1}}
+        const bodyPositional = component.text.match(/\{\{(\d+)\}\}/g);
+        if (bodyPositional) {
+          bodyPositional.forEach(match => {
             const paramNumber = match.match(/\{\{(\d+)\}\}/)?.[1] || '1';
             newPlaceholders[`body_param_${paramNumber}`] = '';
+          });
+        }
+        // Named: {{first_name}}
+        const bodyNamed = component.text.match(/\{\{([A-Za-z_][\w]*)\}\}/g);
+        if (bodyNamed) {
+          bodyNamed.forEach(match => {
+            const name = match.match(/\{\{([A-Za-z_][\w]*)\}\}/)?.[1] || '';
+            if (name) newPlaceholders[`body_param_${name}`] = '';
           });
         }
       }
@@ -693,31 +736,49 @@ export default function PlaygroundContainer({
         component.buttons.forEach((button, buttonIndex) => {
           // Check URL buttons for dynamic parameters
           if (button.type === 'URL' && button.url) {
-            const urlMatch = button.url.match(/\{\{(\d+)\}\}/);
-            if (urlMatch && urlMatch[1]) {
-              const paramNumber = urlMatch[1];
+            const urlMatchPos = button.url.match(/\{\{(\d+)\}\}/);
+            if (urlMatchPos && urlMatchPos[1]) {
+              const paramNumber = urlMatchPos[1];
               newPlaceholders[`button_${buttonIndex}_param_${paramNumber}`] = '';
               console.log(`Found dynamic URL parameter in button ${buttonIndex}: {{${paramNumber}}}`);
+            }
+            const urlMatchNamed = button.url.match(/\{\{([A-Za-z_][\w]*)\}\}/);
+            if (urlMatchNamed && urlMatchNamed[1]) {
+              const name = urlMatchNamed[1];
+              newPlaceholders[`button_${buttonIndex}_param_${name}`] = '';
+              console.log(`Found dynamic URL parameter in button ${buttonIndex}: {{${name}}}`);
             }
           }
           
           // Check phone number buttons for dynamic parameters
           if (button.type === 'PHONE_NUMBER' && button.phone_number) {
-            const phoneMatch = button.phone_number.match(/\{\{(\d+)\}\}/);
-            if (phoneMatch && phoneMatch[1]) {
-              const paramNumber = phoneMatch[1];
+            const phoneMatchPos = button.phone_number.match(/\{\{(\d+)\}\}/);
+            if (phoneMatchPos && phoneMatchPos[1]) {
+              const paramNumber = phoneMatchPos[1];
               newPlaceholders[`button_${buttonIndex}_param_${paramNumber}`] = '';
               console.log(`Found dynamic phone parameter in button ${buttonIndex}: {{${paramNumber}}}`);
+            }
+            const phoneMatchNamed = button.phone_number.match(/\{\{([A-Za-z_][\w]*)\}\}/);
+            if (phoneMatchNamed && phoneMatchNamed[1]) {
+              const name = phoneMatchNamed[1];
+              newPlaceholders[`button_${buttonIndex}_param_${name}`] = '';
+              console.log(`Found dynamic phone parameter in button ${buttonIndex}: {{${name}}}`);
             }
           }
           
           // Check copy code buttons for dynamic parameters
           if (button.type === 'COPY_CODE' && button.text) {
-            const codeMatch = button.text.match(/\{\{(\d+)\}\}/);
-            if (codeMatch && codeMatch[1]) {
-              const paramNumber = codeMatch[1];
+            const codeMatchPos = button.text.match(/\{\{(\d+)\}\}/);
+            if (codeMatchPos && codeMatchPos[1]) {
+              const paramNumber = codeMatchPos[1];
               newPlaceholders[`button_${buttonIndex}_param_${paramNumber}`] = '';
               console.log(`Found dynamic copy code parameter in button ${buttonIndex}: {{${paramNumber}}}`);
+            }
+            const codeMatchNamed = button.text.match(/\{\{([A-Za-z_][\w]*)\}\}/);
+            if (codeMatchNamed && codeMatchNamed[1]) {
+              const name = codeMatchNamed[1];
+              newPlaceholders[`button_${buttonIndex}_param_${name}`] = '';
+              console.log(`Found dynamic copy code parameter in button ${buttonIndex}: {{${name}}}`);
             }
           }
         });
@@ -890,16 +951,18 @@ export default function PlaygroundContainer({
       switch (component.type) {
         case 'HEADER':
           if (component.format === 'TEXT' && component.text) {
-            // Check for dynamic placeholders in header text
-            const headerPlaceholders = component.text.match(/\{\{(\d+)\}\}/g);
-            if (headerPlaceholders && headerPlaceholders.length > 0) {
-              const parameters = headerPlaceholders.map((match) => {
-                const paramNumber = match.match(/\{\{(\d+)\}\}/)?.[1] || '1';
-                const placeholderKey = `header_param_${paramNumber}`;
-                const value = config.templatePlaceholders[placeholderKey] || match;
+            // Collect positional and named placeholders in order of appearance
+            const tokens = component.text.match(/\{\{([^}]+)\}\}/g);
+            if (tokens && tokens.length > 0) {
+              const parameters = tokens.map((match) => {
+                const inner = match.replace(/[{}]/g, '');
+                const isNumber = /^\d+$/.test(inner);
+                const key = `header_param_${inner}`;
+                const value = config.templatePlaceholders[key] || match;
                 return {
                   type: "text",
-                  text: value
+                  text: value,
+                  ...(isNumber ? {} : { parameter_name: inner })
                 };
               });
 
@@ -929,16 +992,18 @@ export default function PlaygroundContainer({
 
         case 'BODY':
           if (component.text) {
-            // Extract all {{number}} placeholders from body text
-            const bodyPlaceholders = component.text.match(/\{\{(\d+)\}\}/g);
-            if (bodyPlaceholders && bodyPlaceholders.length > 0) {
-              const parameters = bodyPlaceholders.map((match) => {
-                const paramNumber = match.match(/\{\{(\d+)\}\}/)?.[1] || '1';
-                const placeholderKey = `body_param_${paramNumber}`;
-                const value = config.templatePlaceholders[placeholderKey] || match;
+            // Extract all placeholders (positional and named) from body text in order
+            const tokens = component.text.match(/\{\{([^}]+)\}\}/g);
+            if (tokens && tokens.length > 0) {
+              const parameters = tokens.map((match) => {
+                const inner = match.replace(/[{}]/g, '');
+                const isNumber = /^\d+$/.test(inner);
+                const key = `body_param_${inner}`;
+                const value = config.templatePlaceholders[key] || match;
                 return {
                   type: "text",
-                  text: value
+                  text: value,
+                  ...(isNumber ? {} : { parameter_name: inner })
                 };
               });
 
@@ -954,56 +1019,59 @@ export default function PlaygroundContainer({
           if (component.buttons && component.buttons.length > 0) {
             component.buttons.forEach((button, buttonIndex) => {
               if (button.type === 'URL' && button.url) {
-                // Check if URL has dynamic parameter
-                const urlMatch = button.url.match(/\{\{(\d+)\}\}/);
-                if (urlMatch) {
-                  const paramNumber = urlMatch[1];
-                  const placeholderKey = `button_${buttonIndex}_param_${paramNumber}`;
-                  const value = config.templatePlaceholders[placeholderKey] || "123456";
-                  
+                // Support positional and named parameters in URL
+                const urlToken = button.url.match(/\{\{([^}]+)\}\}/);
+                if (urlToken && urlToken[1]) {
+                  const inner = urlToken[1];
+                  const isNumber = /^\d+$/.test(inner);
+                  const key = `button_${buttonIndex}_param_${inner}`;
+                  const value = config.templatePlaceholders[key] || "123456";
                   templateComponents.push({
                     type: "button",
                     sub_type: "url",
                     index: buttonIndex,
                     parameters: [{
                       type: "text",
-                      text: value
+                      text: value,
+                      ...(isNumber ? {} : { parameter_name: inner })
                     }]
                   });
                 }
               } else if (button.type === 'PHONE_NUMBER' && button.phone_number) {
-                // Check if phone number has dynamic parameter
-                const phoneMatch = button.phone_number.match(/\{\{(\d+)\}\}/);
-                if (phoneMatch) {
-                  const paramNumber = phoneMatch[1];
-                  const placeholderKey = `button_${buttonIndex}_param_${paramNumber}`;
-                  const value = config.templatePlaceholders[placeholderKey] || "+123456";
-                  
+                // Support positional and named parameters in phone number
+                const phoneToken = button.phone_number.match(/\{\{([^}]+)\}\}/);
+                if (phoneToken && phoneToken[1]) {
+                  const inner = phoneToken[1];
+                  const isNumber = /^\d+$/.test(inner);
+                  const key = `button_${buttonIndex}_param_${inner}`;
+                  const value = config.templatePlaceholders[key] || "+123456";
                   templateComponents.push({
                     type: "button",
                     sub_type: "phone_number",
                     index: buttonIndex,
                     parameters: [{
                       type: "text",
-                      text: value
+                      text: value,
+                      ...(isNumber ? {} : { parameter_name: inner })
                     }]
                   });
                 }
               } else if (button.type === 'COPY_CODE') {
-                // Copy code button with dynamic parameter
-                const codeMatch = button.text?.match(/\{\{(\d+)\}\}/);
-                if (codeMatch) {
-                  const paramNumber = codeMatch[1];
-                  const placeholderKey = `button_${buttonIndex}_param_${paramNumber}`;
-                  const value = config.templatePlaceholders[placeholderKey] || "123456";
-                  
+                // Copy code button supports positional and named parameter in text
+                const codeToken = button.text?.match(/\{\{([^}]+)\}\}/);
+                if (codeToken && codeToken[1]) {
+                  const inner = codeToken[1];
+                  const isNumber = /^\d+$/.test(inner);
+                  const key = `button_${buttonIndex}_param_${inner}`;
+                  const value = config.templatePlaceholders[key] || "123456";
                   templateComponents.push({
                     type: "button",
                     sub_type: "copy_code",
                     index: buttonIndex,
                     parameters: [{
                       type: "text",
-                      text: value
+                      text: value,
+                      ...(isNumber ? {} : { parameter_name: inner })
                     }]
                   });
                 }
@@ -1135,6 +1203,13 @@ export default function PlaygroundContainer({
         }
       };
     }
+  };
+
+  // Map selected language to SyntaxHighlighter language keys
+  const getSyntaxLanguage = (lang: string) => {
+    if (lang === 'curl') return 'bash';
+    if (lang === 'csharp') return 'csharp';
+    return lang;
   };
 
   const generateJavaScriptCode = (url: string, body: any, token: string) => {
@@ -2401,7 +2476,8 @@ curl -X POST '${url}' \\
                           ? 'border-primary text-primary bg-primary/5'
                           : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground'
                       }`}
-                      onClick={() => setSelectedLanguage(lang.value)}
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setSelectedLanguage(lang.value); }}
                       data-language={lang.value}
                     >
                       <span className="language-icon text-sm">{lang.icon}</span>
@@ -2415,7 +2491,7 @@ curl -X POST '${url}' \\
               <div className="text-sm code-content flex-1 overflow-y-auto">
                 <SyntaxHighlighter 
                   code={generateCode(selectedLanguage, config)} 
-                  language={selectedLanguage}
+                  language={getSyntaxLanguage(selectedLanguage)}
                   className="h-full"
                 />
               </div>

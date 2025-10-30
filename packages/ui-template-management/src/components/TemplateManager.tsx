@@ -936,7 +936,7 @@ function PaginationControls({
           variant="outline"
           size="sm"
           onClick={onNextPage}
-          disabled={!pagination.hasNextPage && !pagination.hasPreviousPage ? false : !pagination.hasNextPage ? true : false}
+          disabled={!pagination.hasNextPage && !pagination.hasPreviousPage && totalTemplates === 50 ? false : !pagination.hasNextPage ? true : false}
           className="gap-2"
         >
           {dict.templates.pagination.next}
