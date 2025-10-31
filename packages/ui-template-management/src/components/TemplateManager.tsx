@@ -205,7 +205,6 @@ interface TemplateManagerProps {
     approved: number;
     pending: number;
     rejected: number;
-    withMedia: number;
   };
   loading: boolean;
   error: string | null;
