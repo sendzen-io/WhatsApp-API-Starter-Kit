@@ -81,6 +81,8 @@ export interface PaginationInfo {
 
 export interface TemplateManagerDictionary {
     templates: {
+    deletedSuccessfully: string;
+    deletedSuccessfullyDescription: string;
     contains_media: string;
     preview: string;
     edit_template: string;
@@ -238,6 +240,8 @@ interface TemplateManagerProps {
 // #region FALLBACK DICTIONARY
 const fallbackDictionary: TemplateManagerDictionary = {
   templates: {
+    deletedSuccessfully: "Template deleted successfully",
+    deletedSuccessfullyDescription: "The template has been deleted successfully",
     contains_media: "Header contains {type}",
     preview: "Preview",
     edit_template: "Edit Template",
@@ -452,6 +456,7 @@ function TemplateCard({
     // When deletion is finished, close the menu
     if (wasDeletingRef.current && !isDeleting) {
       setMenuOpen(false);
+      setShowDeleteConfirmation(false);
     }
     wasDeletingRef.current = isDeleting;
   }, [isDeleting]);
@@ -499,7 +504,7 @@ function TemplateCard({
   };
   
   const handleConfirmDelete = () => {
-    setShowDeleteConfirmation(false);
+    // Don't close the dialog here - wait for deletion to complete
     onDelete(template.id);
   };
   
@@ -799,7 +804,15 @@ function TemplateCard({
       </Card>
       
       {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteConfirmation} onOpenChange={setShowDeleteConfirmation}>
+      <Dialog 
+        open={showDeleteConfirmation} 
+        onOpenChange={(open) => {
+          // Prevent closing dialog while deletion is in progress
+          if (!isDeleting) {
+            setShowDeleteConfirmation(open);
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{dict.templates.delete_confirmation.title}</DialogTitle>

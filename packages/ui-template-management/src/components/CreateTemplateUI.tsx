@@ -55,6 +55,63 @@ interface CreateTemplateUIProps {
   isLoading?: boolean;
 }
 
+interface MetaDisplayError {
+  title: string;
+  message: string;
+}
+
+/**
+ * Extract "error_user_title: error_user_msg" from Meta related error object.
+ */
+function getMetaDisplayError(err: any): MetaDisplayError | null {
+  debugger;
+  const tryParse = (s?: string) => {
+    if (!s) return null;
+    try {
+      const obj = JSON.parse(s);
+      return obj && obj.error ? obj.error : null;
+    } catch {
+      return null;
+    }
+  };
+
+  // 1) JSON string in details
+  const fromDetails = tryParse(err?.details);
+  // 2) JSON string in data.error.detail
+  const fromDataDetail = tryParse(err?.data?.error?.detail);
+  // 3) Embedded JSON in message like: "Error from META: {...}"
+  const fromMessage = (() => {
+    const msg = err?.message;
+    if (typeof msg !== "string") return null;
+    const brace = msg.indexOf("{");
+    if (brace < 0) return null;
+    return tryParse(msg.slice(brace));
+  })();
+
+  const meta =
+    fromDetails ??
+    fromDataDetail ??
+    fromMessage;
+
+  if (!meta) return null;
+
+  const title =
+    meta.error_user_title ??
+    "META Error";
+
+  const message =
+    meta.error_user_msg ??
+    meta.message ??
+    "Unknown error";
+
+  return { title, message };
+}
+
+function formatMetaDisplay(err: any): string {
+  const m = getMetaDisplayError(err);
+  return m ? `${m.title}: ${m.message}` : "Unknown error";
+}
+
 const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
   onCancel,
   onSubmit,
@@ -528,29 +585,8 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
       });
       
     } catch (error) {
-      // Handle API error response
-      let errorMessage = "An unexpected error occurred";
-      
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === 'string') {
-        // Handle string errors (like Meta API errors)
-        errorMessage = error;
-      } else if (error && typeof error === 'object') {
-        // Handle object errors - try to extract meaningful message
-        if ('message' in error && typeof error.message === 'string') {
-          errorMessage = error.message;
-        } else if ('response' in error && typeof error.response === 'string') {
-          errorMessage = error.response;
-        } else if ('error' in error && typeof error.error === 'string') {
-          errorMessage = error.error;
-        }
-      }
-      
-      // Store API error details in validation section
+      let errorMessage = formatMetaDisplay(error);
       setApiErrors([errorMessage]);
-      
-      console.error("Template creation failed:", error);
     }
   };
 

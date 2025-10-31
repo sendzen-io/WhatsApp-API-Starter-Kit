@@ -32,6 +32,39 @@ export class FileUploadService {
   }
 
   /**
+   * Helper function to extract error detail from error messages that may contain JSON
+   */
+  private extractErrorDetail(errorMessage: string): string {
+    try {
+      // Try to parse JSON from the error message
+      // Look for JSON object in the message (e.g., "400 - {...}")
+      const jsonMatch = errorMessage.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const jsonStr = jsonMatch[0];
+        const errorData = JSON.parse(jsonStr);
+        
+        // Try to get detail first, then message, then error.detail, then error.message
+        if (errorData.error?.detail) {
+          return errorData.error.detail;
+        }
+        if (errorData.error?.message) {
+          return errorData.error.message;
+        }
+        if (errorData.detail) {
+          return errorData.detail;
+        }
+        if (errorData.message) {
+          return errorData.message;
+        }
+      }
+    } catch (parseError) {
+      // If JSON parsing fails, return the original message
+    }
+    
+    return errorMessage;
+  }
+
+  /**
    * Step 1: Get app ID from partner config
    * This should be called during onboarding, but we'll implement it here for completeness
    */
@@ -76,6 +109,7 @@ export class FileUploadService {
    */
   private async createUploadSession(params: FileUploadParams): Promise<UploadSessionResponse> {
     const appId = await this.getAppId();
+    console.log('appId', appId);
     
     const queryParams = new URLSearchParams({
       file_name: params.fileName,
@@ -100,7 +134,8 @@ export class FileUploadService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Upload session creation failed: ${response.status} - ${errorText}`);
+        const errorDetail = this.extractErrorDetail(errorText);
+        throw new Error(errorDetail);
       }
 
       // Check if response has content before trying to parse JSON
@@ -129,7 +164,10 @@ export class FileUploadService {
         fileId: data.data?.file_id || data.file_id || data.fileId,
       };
     } catch (error) {
-      throw new Error(`Failed to create upload session: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      // Extract clean error detail if the error message contains JSON
+      const cleanError = this.extractErrorDetail(errorMessage);
+      throw new Error(cleanError);
     }
   }
 
@@ -159,7 +197,8 @@ export class FileUploadService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`File upload failed: ${response.status} - ${errorText}`);
+        const errorDetail = this.extractErrorDetail(errorText);
+        throw new Error(errorDetail);
       }
 
       // Check if response has content before trying to parse JSON
@@ -186,9 +225,12 @@ export class FileUploadService {
         fileId: data.data?.h || data.data?.file_id || data.file_id || data.fileId,
       };
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      // Extract clean error detail if the error message contains JSON
+      const cleanError = this.extractErrorDetail(errorMessage);
       return {
         success: false,
-        error: `Failed to upload file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error: cleanError,
       };
     }
   }
@@ -257,9 +299,12 @@ export class FileUploadService {
 
       return uploadResult;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred during upload';
+      // Extract clean error detail if the error message contains JSON
+      const cleanError = this.extractErrorDetail(errorMessage);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred during upload',
+        error: cleanError,
       };
     }
   }
