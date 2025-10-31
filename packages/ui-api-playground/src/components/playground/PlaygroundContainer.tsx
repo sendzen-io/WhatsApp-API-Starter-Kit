@@ -552,7 +552,6 @@ export default function PlaygroundContainer({
         // Check if we already have this project's API key cached
         if (projectApiKeyCache[project.projectId]) {
           projectApiKey = projectApiKeyCache[project.projectId] || '';
-          console.log(`Using cached API key for project ${project.projectId}`);
         } else {
           try {
             const apiKeyData = await wabaService.getAPIKey(project.projectId);
@@ -563,7 +562,6 @@ export default function PlaygroundContainer({
               ...prev,
               [project.projectId]: projectApiKey
             }));
-            console.log(`Fetched and cached API key for project ${project.projectId}`);
           } catch (error) {
             console.warn(`Failed to fetch API key for project ${project.projectId}:`, error);
           }
@@ -666,20 +664,13 @@ export default function PlaygroundContainer({
     const template = facebookTemplates.find(t => t.id === templateId);
     if (!template) return;
 
-    // Debug: Log the template structure to understand the format
-    // console.log('Selected template structure:', JSON.stringify(template, null, 2));
-
     // Extract text content from template components and collect all placeholders
     let messageContent = '';
     const newPlaceholders: Record<string, string> = {};
     
-    console.log('Template selected:', template.name);
-    console.log('Template components:', template.components);
-    
     let hasMediaHeader = false;
     
     template.components.forEach(component => {
-      console.log(`Processing component: ${component.type}`, component);
       
       // Get body text for display
       if (component.type === 'BODY' && component.text) {
@@ -740,13 +731,11 @@ export default function PlaygroundContainer({
             if (urlMatchPos && urlMatchPos[1]) {
               const paramNumber = urlMatchPos[1];
               newPlaceholders[`button_${buttonIndex}_param_${paramNumber}`] = '';
-              console.log(`Found dynamic URL parameter in button ${buttonIndex}: {{${paramNumber}}}`);
             }
             const urlMatchNamed = button.url.match(/\{\{([A-Za-z_][\w]*)\}\}/);
             if (urlMatchNamed && urlMatchNamed[1]) {
               const name = urlMatchNamed[1];
               newPlaceholders[`button_${buttonIndex}_param_${name}`] = '';
-              console.log(`Found dynamic URL parameter in button ${buttonIndex}: {{${name}}}`);
             }
           }
           
@@ -756,13 +745,11 @@ export default function PlaygroundContainer({
             if (phoneMatchPos && phoneMatchPos[1]) {
               const paramNumber = phoneMatchPos[1];
               newPlaceholders[`button_${buttonIndex}_param_${paramNumber}`] = '';
-              console.log(`Found dynamic phone parameter in button ${buttonIndex}: {{${paramNumber}}}`);
             }
             const phoneMatchNamed = button.phone_number.match(/\{\{([A-Za-z_][\w]*)\}\}/);
             if (phoneMatchNamed && phoneMatchNamed[1]) {
               const name = phoneMatchNamed[1];
               newPlaceholders[`button_${buttonIndex}_param_${name}`] = '';
-              console.log(`Found dynamic phone parameter in button ${buttonIndex}: {{${name}}}`);
             }
           }
           
@@ -772,20 +759,16 @@ export default function PlaygroundContainer({
             if (codeMatchPos && codeMatchPos[1]) {
               const paramNumber = codeMatchPos[1];
               newPlaceholders[`button_${buttonIndex}_param_${paramNumber}`] = '';
-              console.log(`Found dynamic copy code parameter in button ${buttonIndex}: {{${paramNumber}}}`);
             }
             const codeMatchNamed = button.text.match(/\{\{([A-Za-z_][\w]*)\}\}/);
             if (codeMatchNamed && codeMatchNamed[1]) {
               const name = codeMatchNamed[1];
               newPlaceholders[`button_${buttonIndex}_param_${name}`] = '';
-              console.log(`Found dynamic copy code parameter in button ${buttonIndex}: {{${name}}}`);
             }
           }
         });
       }
     });
-    
-    console.log('Has media header:', hasMediaHeader);
     
     // Create parameters based on what we found
     if (hasMediaHeader) {
@@ -798,9 +781,6 @@ export default function PlaygroundContainer({
         newPlaceholders[key] = '1234';
       });
     }
-
-    console.log('Final placeholders found:', newPlaceholders);
-    console.log('Total placeholders count:', Object.keys(newPlaceholders).length);
 
     // Clear validation errors when template changes
     setValidationErrors({});
