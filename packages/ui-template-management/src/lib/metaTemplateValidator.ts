@@ -4,7 +4,7 @@
  */
 
 import { CreateTemplatePayload, TemplateComponent, AuthTemplateComponent } from '../types/templateTypes';
-
+import { SUPPORTED_LANGUAGES as SL } from './languages';
 export interface ValidationError {
   field: string;
   message: string;
@@ -22,12 +22,9 @@ export interface ValidationResult {
 }
 
 export class MetaTemplateValidator {
-  private static readonly SUPPORTED_LANGUAGES = [
-    'af', 'sq', 'ar', 'az', 'bn', 'bg', 'ca', 'zh_CN', 'zh_HK', 'zh_TW', 'hr', 'cs', 'da', 'nl', 'en', 'en_GB', 'en_US',
-    'et', 'fil', 'fi', 'fr', 'ka', 'de', 'el', 'gu', 'he', 'hi', 'hu', 'id', 'ga', 'it', 'ja', 'kn', 'kk', 'ko', 'lo',
-    'lv', 'lt', 'mk', 'ms', 'ml', 'mr', 'nb', 'fa', 'pl', 'pt_BR', 'pt_PT', 'pa', 'ro', 'ru', 'sr', 'sk', 'sl', 'es',
-    'es_AR', 'es_ES', 'es_MX', 'sw', 'sv', 'ta', 'te', 'th', 'tr', 'uk', 'ur', 'uz', 'vi', 'zu'
-  ];
+
+
+  private static readonly SUPPORTED_LANGUAGES = SL.map(language => language.code);
 
   private static readonly CHARACTER_LIMITS = {
     template_name: { min: 1, max: 512 },
@@ -71,8 +68,8 @@ export class MetaTemplateValidator {
     // Category-specific validation
     this.validateCategorySpecific(payload, errors, warnings);
     
-    // Component validation
-    this.validateComponents(payload, errors, warnings);
+    // Component validation (pass category context)
+    this.validateComponents(payload, payload.category, errors, warnings);
     
     // Button validation
     this.validateButtons(payload, errors, warnings);
@@ -202,7 +199,8 @@ export class MetaTemplateValidator {
     const authPayload = payload as any; // Cast to access auth-specific properties
     
     // AUTHENTICATION templates must have exactly one OTP button
-    const buttonComponents = authPayload.components?.filter((c: any) => c.type === 'buttons') || [];
+    // Use uppercase 'BUTTONS' to match the actual structure
+    const buttonComponents = authPayload.components?.filter((c: any) => c.type === 'BUTTONS') || [];
     
     if (buttonComponents.length === 0) {
       errors.push(this.createError(
@@ -222,7 +220,8 @@ export class MetaTemplateValidator {
       ));
     } else {
       const buttons = buttonComponents[0]?.buttons || [];
-      const otpButtons = buttons.filter((b: any) => b.type === 'otp');
+      // Check for OTP buttons - use uppercase 'OTP' to match the actual structure
+      const otpButtons = buttons.filter((b: any) => b.type === 'OTP');
       
       if (otpButtons.length === 0) {
         errors.push(this.createError(
@@ -250,7 +249,8 @@ export class MetaTemplateValidator {
     }
 
     // AUTHENTICATION templates should not have header components
-    const headerComponents = authPayload.components?.filter((c: any) => c.type === 'header') || [];
+    // Use uppercase 'HEADER' to match the actual structure
+    const headerComponents = authPayload.components?.filter((c: any) => c.type === 'HEADER') || [];
     if (headerComponents.length > 0) {
       warnings.push(this.createError(
         'components',
@@ -260,6 +260,84 @@ export class MetaTemplateValidator {
         true // User-facing
       ));
     }
+  }
+
+  /**
+   * Validate package name format
+   */
+  private static validatePackageName(packageName: string): { isValid: boolean; error?: string } {
+    if (!packageName || packageName.trim().length === 0) {
+      return { isValid: false, error: 'Package name is required' };
+    }
+    
+    if (packageName.length > 224) {
+      return { isValid: false, error: 'Package name must not exceed 224 characters' };
+    }
+    
+    // Must be alphanumeric, underscore, or period
+    if (!/^[a-zA-Z0-9_.]+$/.test(packageName)) {
+      return { isValid: false, error: 'Package name can only contain letters, numbers, underscores, and periods' };
+    }
+    
+    // Must have at least two segments separated by a dot
+    const segments = packageName.split('.');
+    if (segments.length < 2) {
+      return { isValid: false, error: 'Package name must have at least two segments separated by a dot (e.g., com.example.app)' };
+    }
+    
+    // Each segment must start with a letter
+    if (segments.some(s => !/^[a-zA-Z]/.test(s))) {
+      return { isValid: false, error: 'Each segment of the package name must start with a letter' };
+    }
+    
+    return { isValid: true };
+  }
+
+  /**
+   * Validate signature hash format
+   */
+  private static validateSignatureHash(signatureHash: string): { isValid: boolean; error?: string } {
+    if (!signatureHash || signatureHash.trim().length === 0) {
+      return { isValid: false, error: 'Signature hash is required' };
+    }
+    
+    if (signatureHash.length !== 11) {
+      return { isValid: false, error: 'Signature hash must be exactly 11 characters' };
+    }
+    
+    // Must be base64 characters (A-Z, a-z, 0-9, +, /, =)
+    if (!/^[a-zA-Z0-9+/=]+$/.test(signatureHash)) {
+      return { isValid: false, error: 'Signature hash contains invalid characters. Use A-Z, a-z, 0-9, +, /, or =' };
+    }
+    
+    return { isValid: true };
+  }
+
+  /**
+   * Validate URL format using regex
+   */
+  private static validateUrlFormat(url: string): { isValid: boolean; error?: string } {
+    if (!url || url.trim().length === 0) {
+      return { isValid: false, error: 'URL is required' };
+    }
+
+    // Comprehensive URL regex pattern
+    // Supports: http://, https://, www., and various TLDs
+    // Allows ports, paths, query strings, and fragments
+    const urlPattern = /^https?:\/\/(?:[-\w.])+(?::[0-9]+)?(?:\/(?:[\w\/_.])*)?(?:\?(?:[-\w&=%.])*)?(?:#(?:[-\w.])*)?$/i;
+    
+    // Also check for valid domain structure
+    const domainPattern = /^https?:\/\/(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(?::[0-9]+)?(?:\/.*)?$/i;
+    
+    if (!urlPattern.test(url)) {
+      return { isValid: false, error: 'Invalid URL format. URL must start with http:// or https://' };
+    }
+
+    if (!domainPattern.test(url)) {
+      return { isValid: false, error: 'Invalid URL format. Please provide a valid domain name' };
+    }
+
+    return { isValid: true };
   }
 
   /**
@@ -288,28 +366,58 @@ export class MetaTemplateValidator {
     }
 
     // Validate supported apps for one_tap and zero_tap
+    // Supported apps are OPTIONAL - if none exist, that's fine
+    // But if they exist, they must be valid
     if (['one_tap', 'zero_tap'].includes(otpButton.otp_type)) {
-      if (!otpButton.supported_apps || otpButton.supported_apps.length === 0) {
-        errors.push(this.createError(
-          'otp_button',
-          `${otpButton.otp_type} OTP buttons must specify supported_apps`,
-          'OTP_MISSING_SUPPORTED_APPS',
-          'error',
-          false // Technical error
-        ));
-      } else {
+      // Only validate if supported_apps array exists and has items
+      if (otpButton.supported_apps && otpButton.supported_apps.length > 0) {
         otpButton.supported_apps.forEach((app: any, index: number) => {
-          if (!app.package_name || !app.signature_hash) {
+          // Validate package name
+          if (!app.package_name || app.package_name.trim().length === 0) {
             errors.push(this.createError(
               'otp_button',
-              `Supported app ${index + 1} must have package_name and signature_hash`,
-              'OTP_INVALID_SUPPORTED_APP',
+              `Supported app ${index + 1}: Package name is required`,
+              'OTP_MISSING_PACKAGE_NAME',
               'error',
-              false // Technical error
+              true // User-facing
             ));
+          } else {
+            const packageValidation = this.validatePackageName(app.package_name);
+            if (!packageValidation.isValid) {
+              errors.push(this.createError(
+                'otp_button',
+                `Supported app ${index + 1}: ${packageValidation.error}`,
+                'OTP_INVALID_PACKAGE_NAME',
+                'error',
+                true // User-facing
+              ));
+            }
+          }
+          
+          // Validate signature hash
+          if (!app.signature_hash || app.signature_hash.trim().length === 0) {
+            errors.push(this.createError(
+              'otp_button',
+              `Supported app ${index + 1}: Signature hash is required`,
+              'OTP_MISSING_SIGNATURE_HASH',
+              'error',
+              true // User-facing
+            ));
+          } else {
+            const hashValidation = this.validateSignatureHash(app.signature_hash);
+            if (!hashValidation.isValid) {
+              errors.push(this.createError(
+                'otp_button',
+                `Supported app ${index + 1}: ${hashValidation.error}`,
+                'OTP_INVALID_SIGNATURE_HASH',
+                'error',
+                true // User-facing
+              ));
+            }
           }
         });
       }
+      // If no supported apps, that's fine - no error
     }
 
     // Validate zero_tap specific requirements
@@ -317,10 +425,10 @@ export class MetaTemplateValidator {
       if (otpButton.zero_tap_terms_accepted !== true) {
         errors.push(this.createError(
           'otp_button',
-          'Zero-tap OTP buttons must have zero_tap_terms_accepted set to true',
+          'Zero-tap OTP buttons require accepting the terms and conditions',
           'ZERO_TAP_TERMS_NOT_ACCEPTED',
           'error',
-          false // Technical error
+          true // User-facing - changed to true
         ));
       }
     }
@@ -403,6 +511,7 @@ export class MetaTemplateValidator {
    */
   private static validateComponents(
     payload: CreateTemplatePayload,
+    category: "MARKETING" | "UTILITY" | "AUTHENTICATION",
     errors: ValidationError[],
     warnings: ValidationError[]
   ): void {
@@ -418,7 +527,7 @@ export class MetaTemplateValidator {
     }
 
     payload.components.forEach((component, index) => {
-      this.validateComponent(component as any, index, errors, warnings);
+      this.validateComponent(component as any, index, category, errors, warnings);
     });
   }
 
@@ -428,13 +537,15 @@ export class MetaTemplateValidator {
   private static validateComponent(
     component: TemplateComponent | AuthTemplateComponent,
     index: number,
+    category: "MARKETING" | "UTILITY" | "AUTHENTICATION",
     errors: ValidationError[],
     warnings: ValidationError[]
   ): void {
     const componentField = `components[${index}]`;
 
     // Validate component type
-    const validTypes = ['header', 'body', 'footer', 'buttons', 'carousel', 'limited_time_offer'];
+    // Use uppercase to match actual component types (HEADER, BODY, FOOTER, BUTTONS, etc.)
+    const validTypes = ['HEADER', 'BODY', 'FOOTER', 'BUTTONS', 'CAROUSEL', 'LIMITED_TIME_OFFER'];
     if (!validTypes.includes(component.type)) {
       errors.push(this.createError(
         componentField,
@@ -454,7 +565,7 @@ export class MetaTemplateValidator {
         this.validateBodyComponent(component as any, componentField, errors, warnings);
         break;
       case 'FOOTER':
-        this.validateFooterComponent(component as any, componentField, errors, warnings);
+        this.validateFooterComponent(component as any, componentField, category, errors, warnings);
         break;
       case 'BUTTONS':
         this.validateButtonsComponent(component as any, componentField, errors, warnings);
@@ -509,19 +620,34 @@ export class MetaTemplateValidator {
           'error',
           true // User-facing
         ));
+      } else {
+        // Check for variables in header text ({{1}} only for headers)
+        const hasVariable = /\{\{(\d+)\}\}/.test(component.text);
+        if (hasVariable) {
+          // Header can only have one variable {{1}}
+          if (!component.example || !component.example.header_text || !component.example.header_text[0] || !component.example.header_text[0].trim()) {
+            errors.push(this.createError(
+              field,
+              'Header text contains a variable ({{1}}) but example value is required. Please provide an example value.',
+              'HEADER_MISSING_VARIABLE_EXAMPLE',
+              'error',
+              true // User-facing - changed to error and made it required
+            ));
+          }
+        }
       }
     }
 
     if (['IMAGE', 'VIDEO', 'DOCUMENT'].includes(component.format)) {
-      if (!component.example || !component.example.header_handle) {
+      if (!component.example || !component.example.header_handle || !component.example.header_handle[0] || !component.example.header_handle[0].trim()) {
         errors.push(this.createError(
           field,
-          `${component.format} header must have example with header_handle`,
+          `${component.format} header must have a media file`,
           'HEADER_MISSING_MEDIA_EXAMPLE',
           'error',
-          false // Technical error - shouldn't happen in UI
+          true // User-facing - changed to true so errors show in UI
         ));
-      }
+      } 
     }
   }
 
@@ -565,19 +691,90 @@ export class MetaTemplateValidator {
       ));
     }
 
-    // Check for variables in body text
+    // Check for variables in body text (both positional {{1}}, {{2}} and named {{variable_name}})
     if (component.text) {
-      const variableMatches = component.text.match(/\{\{(\d+)\}\}/g);
-      if (variableMatches && variableMatches.length > 0) {
-        // Validate that examples are provided for variables
-        if (!component.example || !component.example.body_text) {
-          warnings.push(this.createError(
-            field,
-            'Body text contains variables but no examples are provided',
-            'BODY_MISSING_VARIABLE_EXAMPLES',
-            'warning',
-            true // User-facing
-          ));
+      // Check for positional variables ({{1}}, {{2}}, etc.)
+      const positionalMatches = component.text.match(/\{\{(\d+)\}\}/g);
+      // Check for named variables ({{variable_name}}, etc.)
+      const namedMatches = component.text.match(/\{\{([A-Za-z_][\w]*)\}\}/g);
+      
+      const hasVariables = (positionalMatches && positionalMatches.length > 0) || 
+                           (namedMatches && namedMatches.length > 0);
+      
+      if (hasVariables) {
+        // For positional parameters, check body_text array
+        if (positionalMatches && positionalMatches.length > 0) {
+          if (!component.example || !component.example.body_text || !component.example.body_text[0]) {
+            errors.push(this.createError(
+              field,
+              'Body text contains variables ({{1}}, {{2}}, etc.) but example values are required. Please provide example values for all variables.',
+              'BODY_MISSING_VARIABLE_EXAMPLES',
+              'error',
+              true // User-facing - changed to error and made it required
+            ));
+          } else {
+            // Check that all variables have examples
+            const examples = component.example.body_text[0] || [];
+            const requiredCount = positionalMatches.length;
+            const providedCount = examples.filter((ex: string) => ex && ex.trim().length > 0).length;
+            
+            if (providedCount < requiredCount) {
+              errors.push(this.createError(
+                field,
+                `Body text contains ${requiredCount} variable(s) but only ${providedCount} example value(s) provided. Please provide example values for all variables.`,
+                'BODY_INCOMPLETE_VARIABLE_EXAMPLES',
+                'error',
+                true // User-facing
+              ));
+            }
+          }
+        }
+        
+        // For named parameters, check body_text_named_params array
+        if (namedMatches && namedMatches.length > 0) {
+          if (!component.example || !component.example.body_text_named_params) {
+            errors.push(this.createError(
+              field,
+              'Body text contains named variables ({{variable_name}}, etc.) but example values are required. Please provide example values for all variables.',
+              'BODY_MISSING_NAMED_VARIABLE_EXAMPLES',
+              'error',
+              true // User-facing - changed to error and made it required
+            ));
+          } else {
+            // Extract all unique variable names
+            const variableNames = Array.from(new Set(
+              namedMatches.map((match: string) => match.replace(/[{}]/g, ''))
+            )) as string[];
+            
+            // Check that all variables have examples
+            const providedNames = (component.example.body_text_named_params as any[]).map((param: any) => param.param_name);
+            const missingNames = variableNames.filter((name: string) => !providedNames.includes(name));
+            
+            if (missingNames.length > 0) {
+              errors.push(this.createError(
+                field,
+                `Body text contains variables (${missingNames.map((n: string) => `{{${n}}}`).join(', ')}) but example values are missing. Please provide example values for all variables.`,
+                'BODY_INCOMPLETE_NAMED_VARIABLE_EXAMPLES',
+                'error',
+                true // User-facing
+              ));
+            } else {
+              // Check that provided examples are not empty
+              const emptyExamples = (component.example.body_text_named_params as any[]).filter(
+                (param: any) => !param.example || !param.example.trim()
+              );
+              
+              if (emptyExamples.length > 0) {
+                errors.push(this.createError(
+                  field,
+                  `Example values are required for all variables. Please fill in example values for: ${emptyExamples.map((p: any) => `{{${p.param_name}}}`).join(', ')}`,
+                  'BODY_EMPTY_NAMED_VARIABLE_EXAMPLES',
+                  'error',
+                  true // User-facing
+                ));
+              }
+            }
+          }
         }
       }
     }
@@ -589,9 +786,23 @@ export class MetaTemplateValidator {
   private static validateFooterComponent(
     component: any,
     field: string,
+    category: "MARKETING" | "UTILITY" | "AUTHENTICATION",
     errors: ValidationError[],
     warnings: ValidationError[]
   ): void {
+    // For AUTHENTICATION templates, footer uses code_expiration_minutes instead of text
+    // Check category first, then check if component has code_expiration_minutes property
+    const isAuthFooter = category === 'AUTHENTICATION' || 
+                        ('code_expiration_minutes' in component && !component.hasOwnProperty('text'));
+    
+    if (isAuthFooter) {
+      // Authentication footer validation - code_expiration_minutes is optional
+      // No validation needed as it's optional per Meta API
+      // Even if it has a default value or is set, we don't require it
+      return;
+    }
+    
+    // Regular footer validation for MARKETING/UTILITY templates
     if (!component.text || component.text.trim().length === 0) {
       errors.push(this.createError(
         field,
@@ -659,8 +870,11 @@ export class MetaTemplateValidator {
       return;
     }
 
-    const validTypes = ['url', 'phone_number', 'quick_reply', 'copy_code', 'otp', 'spm', 'mpm'];
-    if (!validTypes.includes(button.type)) {
+    // Button types are uppercase (URL, PHONE_NUMBER, QUICK_REPLY, OTP, etc.)
+    const validTypes = ['URL', 'PHONE_NUMBER', 'QUICK_REPLY', 'COPY_CODE', 'OTP', 'SPM', 'MPM',
+                       'url', 'phone_number', 'quick_reply', 'copy_code', 'otp', 'spm', 'mpm']; // Support both cases for backward compatibility
+    const buttonTypeUpper = button.type.toUpperCase();
+    if (!validTypes.includes(button.type) && !validTypes.includes(buttonTypeUpper)) {
       errors.push(this.createError(
         field,
         `Invalid button type: ${button.type}`,
@@ -670,9 +884,17 @@ export class MetaTemplateValidator {
       ));
     }
 
+    // Normalize button type to uppercase for consistent checking
+    const normalizedType = buttonTypeUpper;
+
+    // OTP buttons are validated separately in validateOtpButton
+    // Skip regular button validation for OTP buttons
+    if (normalizedType === 'OTP') {
+      return; // OTP buttons are validated in validateAuthenticationTemplate
+    }
+
     // Validate button text (skip for copy_code buttons as they have predefined text)
-    const isCopyCodeButton = button.type === 'copy_code' || 
-                           (button.type === 'otp' && button.otp_type === 'copy_code');
+    const isCopyCodeButton = normalizedType === 'COPY_CODE';
     
     if (!isCopyCodeButton) {
       if (!button.text || button.text.trim().length === 0) {
@@ -695,8 +917,8 @@ export class MetaTemplateValidator {
     }
 
     // Validate button-specific fields
-    switch (button.type) {
-      case 'url':
+    switch (normalizedType) {
+      case 'URL':
         if (!button.url || button.url.trim().length === 0) {
           errors.push(this.createError(
             field,
@@ -705,17 +927,135 @@ export class MetaTemplateValidator {
             'error',
             true // User-facing
           ));
-        } else if (button.url.length > this.CHARACTER_LIMITS.url.max) {
-          errors.push(this.createError(
-            field,
-            `URL must not exceed ${this.CHARACTER_LIMITS.url.max} characters`,
-            'URL_TOO_LONG',
-            'error',
-            true // User-facing
-          ));
+        } else {
+          // Check URL length
+          if (button.url.length > this.CHARACTER_LIMITS.url.max) {
+            errors.push(this.createError(
+              field,
+              `URL must not exceed ${this.CHARACTER_LIMITS.url.max} characters`,
+              'URL_TOO_LONG',
+              'error',
+              true // User-facing
+            ));
+          } else {
+            // Check if URL is dynamic (contains {{1}} or similar)
+            const isDynamic = /\{\{(\d+)\}\}/.test(button.url);
+            
+            if (isDynamic) {
+              // Extract base URL part (everything before {{1}})
+              const paramMatch = button.url.match(/(.+?)\{\{(\d+)\}\}/);
+              let baseUrl = '';
+              
+              if (paramMatch && paramMatch[1]) {
+                baseUrl = paramMatch[1];
+              } else {
+                // If {{1}} is at the start or no base URL found
+                baseUrl = button.url.replace(/\{\{(\d+)\}\}.*$/, '');
+              }
+              
+              // Remove trailing slash if exists (before {{1}})
+              baseUrl = baseUrl.replace(/\/+$/, '');
+              
+              if (baseUrl.trim().length === 0) {
+                errors.push(this.createError(
+                  field,
+                  'Dynamic URL must have a valid base URL before {{1}}. Example: https://example.com/{{1}}',
+                  'URL_INVALID_DYNAMIC_FORMAT',
+                  'error',
+                  true // User-facing
+                ));
+              } else {
+                // Validate base URL format (ensure it's a valid URL structure)
+                // Check if it starts with http:// or https://
+                if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+                  errors.push(this.createError(
+                    field,
+                    'Dynamic URL base must start with http:// or https://. Example: https://example.com/{{1}}',
+                    'URL_INVALID_DYNAMIC_BASE',
+                    'error',
+                    true // User-facing
+                  ));
+                } else {
+                  // Validate the base URL format
+                  const urlValidation = this.validateUrlFormat(baseUrl);
+                  if (!urlValidation.isValid) {
+                    errors.push(this.createError(
+                      field,
+                      `Invalid dynamic URL base: ${urlValidation.error}. Make sure the URL before {{1}} is valid.`,
+                      'URL_INVALID_DYNAMIC_BASE',
+                      'error',
+                      true // User-facing
+                    ));
+                  }
+                }
+              }
+              
+              // For dynamic URLs, example value is REQUIRED
+              if (!button.example || !button.example.length || !button.example[0] || !button.example[0].trim()) {
+                errors.push(this.createError(
+                  field,
+                  'Example value is required for dynamic URLs. Please provide an example value for the {{1}} parameter.',
+                  'URL_MISSING_EXAMPLE_VALUE',
+                  'error',
+                  true // User-facing
+                ));
+              } else {
+                // Validate example value if provided
+                const exampleValue = button.example[0].trim();
+                
+                if (exampleValue.length === 0) {
+                  // Empty example after trim - treat as missing
+                  errors.push(this.createError(
+                    field,
+                    'Example value is required for dynamic URLs. Please provide an example value for the {{1}} parameter.',
+                    'URL_MISSING_EXAMPLE_VALUE',
+                    'error',
+                    true // User-facing
+                  ));
+                } else {
+                  // Example value should not contain URL protocol - it should be just the parameter value
+                  if (exampleValue.startsWith('http://') || exampleValue.startsWith('https://')) {
+                    errors.push(this.createError(
+                      field,
+                      'Example value should not include http:// or https://. Enter only the dynamic part (e.g., "product-123" for https://example.com/{{1}}).',
+                      'URL_INVALID_EXAMPLE_FORMAT',
+                      'error',
+                      true // User-facing
+                    ));
+                  } else if (baseUrl && baseUrl.startsWith('http')) {
+                    // Construct full URL with example and validate
+                    const separator = baseUrl.endsWith('/') ? '' : '/';
+                    const fullExampleUrl = baseUrl + separator + exampleValue;
+                    const fullUrlValidation = this.validateUrlFormat(fullExampleUrl);
+                    if (!fullUrlValidation.isValid) {
+                      errors.push(this.createError(
+                        field,
+                        `The full URL with your example value is invalid: ${fullUrlValidation.error}. Check that the example value creates a valid URL when combined with the base URL.`,
+                        'URL_INVALID_EXAMPLE_FULL',
+                        'error',
+                        true // User-facing
+                      ));
+                    }
+                  }
+                }
+              }
+            } else {
+              // For static URLs, validate the format directly
+              const urlValidation = this.validateUrlFormat(button.url);
+              if (!urlValidation.isValid) {
+                errors.push(this.createError(
+                  field,
+                  `Invalid URL format: ${urlValidation.error}`,
+                  'URL_INVALID_FORMAT',
+                  'error',
+                  true // User-facing
+                ));
+              }
+            }
+          }
         }
         break;
-      case 'phone_number':
+      case 'PHONE_NUMBER':
         if (!button.phone_number || button.phone_number.trim().length === 0) {
           errors.push(this.createError(
             field,
@@ -804,6 +1144,13 @@ export class MetaTemplateValidator {
       'BUTTON_TEXT_TOO_LONG': 'Button text is too long',
       'URL_BUTTON_MISSING_URL': 'URL button must have url',
       'URL_TOO_LONG': 'URL is too long',
+      'URL_INVALID_FORMAT': 'Invalid URL format. URL must start with http:// or https:// and have a valid domain',
+      'URL_INVALID_DYNAMIC_FORMAT': 'Dynamic URL must have a valid base URL before {{1}}. Example: https://example.com/{{1}}',
+      'URL_INVALID_DYNAMIC_BASE': 'Dynamic URL base must start with http:// or https://. Example: https://example.com/{{1}}',
+      'URL_INVALID_EXAMPLE_FORMAT': 'Example value should not include http:// or https://. Enter only the dynamic part (e.g., "product-123" for https://example.com/{{1}}).',
+      'URL_MISSING_EXAMPLE_VALUE': 'Example value is required for dynamic URLs. Please provide an example value for the {{1}} parameter.',
+      'URL_INVALID_EXAMPLE_FULL': 'The full URL with your example value is invalid. Check that the example value creates a valid URL when combined with the base URL.',
+      'HEADER_INVALID_MEDIA_URL': 'Invalid media URL format',
       'PHONE_BUTTON_MISSING_NUMBER': 'Phone number button must have phone_number',
       'PHONE_NUMBER_TOO_LONG': 'Phone number is too long',
       'DUPLICATE_BUTTON_TYPES': 'Each button in a component must have a unique type',
@@ -811,7 +1158,11 @@ export class MetaTemplateValidator {
       'INVALID_OTP_TYPE': 'Invalid OTP button type',
       'OTP_MISSING_SUPPORTED_APPS': 'OTP button must specify supported_apps',
       'OTP_INVALID_SUPPORTED_APP': 'Supported app must have package_name and signature_hash',
-      'ZERO_TAP_TERMS_NOT_ACCEPTED': 'Zero-tap OTP buttons must have zero_tap_terms_accepted set to true'
+      'OTP_MISSING_PACKAGE_NAME': 'Supported app: Package name is required',
+      'OTP_INVALID_PACKAGE_NAME': 'Supported app: Invalid package name format',
+      'OTP_MISSING_SIGNATURE_HASH': 'Supported app: Signature hash is required',
+      'OTP_INVALID_SIGNATURE_HASH': 'Supported app: Signature hash must be exactly 11 characters',
+      'ZERO_TAP_TERMS_NOT_ACCEPTED': 'Zero-tap OTP buttons require accepting the terms and conditions'
     };
 
     return messages[error.code] || error.message;

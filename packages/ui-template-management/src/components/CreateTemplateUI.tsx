@@ -209,32 +209,40 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
     return "NAMED";
   };
 
-  // Real-time validation
+  // Real-time validation - run validation whenever category/components change
+  // This allows component-level errors to show immediately, even before name/language are filled
   useEffect(() => {
-    if (name && language && category) {
-      // Auto-detect parameter format from body text
-      const bodyComponent = components.find(c => c.type === 'BODY') as BodyComponent | undefined;
-      const detectedFormat = bodyComponent?.text ? detectParameterFormat(bodyComponent.text) : "NAMED";
-      setParameterFormat(detectedFormat);
-
-      let payload: CreateTemplatePayload;
-      switch (category) {
-        case "MARKETING":
-          payload = { name, language, category, parameter_format: detectedFormat.toLowerCase() as "named" | "positional", components };
-          break;
-        case "UTILITY":
-          payload = { name, language, category, parameter_format: detectedFormat.toLowerCase() as "named" | "positional", components };
-          break;
-        case "AUTHENTICATION":
-          payload = { name, language, category, components: authComponents };
-          break;
-        default:
-          return;
-      }
-      validateTemplate(payload);
-    } else {
+    if (!category) {
       clearValidation();
+      return;
     }
+
+    // Validate with actual values (empty strings will trigger validation errors)
+    // This allows both name/language errors AND component errors to show
+    // Component validation depends on category, so it needs category to be set
+    const validationName = name || '';
+    const validationLanguage = language || '';
+
+    // Auto-detect parameter format from body text
+    const bodyComponent = components.find(c => c.type === 'BODY') as BodyComponent | undefined;
+    const detectedFormat = bodyComponent?.text ? detectParameterFormat(bodyComponent.text) : "NAMED";
+    setParameterFormat(detectedFormat);
+
+    let payload: CreateTemplatePayload;
+    switch (category) {
+      case "MARKETING":
+        payload = { name: validationName, language: validationLanguage, category, parameter_format: detectedFormat.toLowerCase() as "named" | "positional", components };
+        break;
+      case "UTILITY":
+        payload = { name: validationName, language: validationLanguage, category, parameter_format: detectedFormat.toLowerCase() as "named" | "positional", components };
+        break;
+      case "AUTHENTICATION":
+        payload = { name: validationName, language: validationLanguage, category, components: authComponents };
+        break;
+      default:
+        return;
+    }
+    validateTemplate(payload);
   }, [name, language, category, components, authComponents, validateTemplate, clearValidation]);
 
   const handleCategoryChange = (
@@ -331,13 +339,22 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                 newErrors[`header_${index}`] = "Header text is required.";
               } else if (headerComponent.text.length > 60) {
                 newErrors[`header_${index}`] = "Header text cannot exceed 60 characters.";
+              } else {
+                // Check for variables in header text ({{1}})
+                const hasVariable = /\{\{(\d+)\}\}/.test(headerComponent.text);
+                if (hasVariable) {
+                  // Header can only have one variable {{1}}
+                  if (!headerComponent.example?.header_text?.[0] || !headerComponent.example.header_text[0].trim()) {
+                    newErrors[`header_${index}`] = "Header contains a variable ({{1}}) but example value is required.";
+                  }
+                }
               }
             } else if (headerComponent.format !== "LOCATION") {
               // For image, video, document formats, check if media URL is provided
               if (headerComponent.format === "IMAGE" || headerComponent.format === "VIDEO" || headerComponent.format === "DOCUMENT") {
                 const mediaComponent = headerComponent as any;
                 if (!mediaComponent.example?.header_handle?.[0] || !mediaComponent.example.header_handle[0].trim()) {
-                  newErrors[`header_${index}`] = "Media URL is required for this header type.";
+                  newErrors[`header_${index}`] = `${headerComponent.format} header must have a media file.`;
                 }
               }
             }
@@ -347,6 +364,51 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
               newErrors[`body_${index}`] = "Body text is required.";
             } else if (component.text.length > 1024) {
               newErrors[`body_${index}`] = "Body text cannot exceed 1024 characters.";
+            } else {
+              // Check for variables in body text (both positional and named)
+              const bodyComponent = component as BodyComponent;
+              const positionalMatches = bodyComponent.text.match(/\{\{(\d+)\}\}/g);
+              const namedMatches = bodyComponent.text.match(/\{\{([A-Za-z_][\w]*)\}\}/g);
+              
+              // Check positional parameters
+              if (positionalMatches && positionalMatches.length > 0) {
+                if (!bodyComponent.example?.body_text || !bodyComponent.example.body_text[0]) {
+                  newErrors[`body_${index}`] = "Body text contains variables ({{1}}, {{2}}, etc.) but example values are required.";
+                } else {
+                  const examples = bodyComponent.example.body_text[0] || [];
+                  const requiredCount = positionalMatches.length;
+                  const providedCount = examples.filter((ex: string) => ex && ex.trim().length > 0).length;
+                  
+                  if (providedCount < requiredCount) {
+                    newErrors[`body_${index}`] = `Body text contains ${requiredCount} variable(s) but only ${providedCount} example value(s) provided. Please provide example values for all variables.`;
+                  }
+                }
+              }
+              
+              // Check named parameters
+              if (namedMatches && namedMatches.length > 0) {
+                if (!bodyComponent.example?.body_text_named_params) {
+                  newErrors[`body_${index}`] = "Body text contains named variables ({{variable_name}}, etc.) but example values are required.";
+                } else {
+                  const variableNames = Array.from(new Set(
+                    namedMatches.map((match: string) => match.replace(/[{}]/g, ''))
+                  ));
+                  const providedNames = bodyComponent.example.body_text_named_params.map((param: any) => param.param_name);
+                  const missingNames = variableNames.filter((name: string) => !providedNames.includes(name));
+                  
+                  if (missingNames.length > 0) {
+                    newErrors[`body_${index}`] = `Body text contains variables (${missingNames.map((n: string) => `{{${n}}}`).join(', ')}) but example values are missing.`;
+                  } else {
+                    // Check for empty examples
+                    const emptyExamples = bodyComponent.example.body_text_named_params.filter(
+                      (param: any) => !param.example || !param.example.trim()
+                    );
+                    if (emptyExamples.length > 0) {
+                      newErrors[`body_${index}`] = `Example values are required for all variables. Please fill in: ${emptyExamples.map((p: any) => `{{${p.param_name}}}`).join(', ')}`;
+                    }
+                  }
+                }
+              }
             }
             break;
           case "FOOTER":
@@ -429,6 +491,43 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                   newErrors[`button_${index}_${btnIndex}_url`] = "URL is required.";
                 } else if (button.url.length > 2000) {
                   newErrors[`button_${index}_${btnIndex}_url`] = "URL cannot exceed 2000 characters.";
+                } else {
+                  // Validate URL format
+                  const isDynamic = /\{\{(\d+)\}\}/.test(button.url);
+                  let urlToValidate = button.url;
+                  
+                  if (isDynamic) {
+                    // For dynamic URLs, validate base URL
+                    urlToValidate = button.url.replace(/\{\{(\d+)\}\}.*$/, '');
+                    if (urlToValidate.trim().length === 0) {
+                      newErrors[`button_${index}_${btnIndex}_url`] = "Dynamic URL must have a valid base URL before the parameter.";
+                    } else {
+                      // For dynamic URLs, example value is REQUIRED
+                      if (!button.example || !button.example.length || !button.example[0] || !button.example[0].trim()) {
+                        newErrors[`button_${index}_${btnIndex}_url`] = "Example value is required for dynamic URLs. Please provide an example value for the {{1}} parameter.";
+                      } else {
+                        const exampleValue = button.example[0];
+                        if (exampleValue.startsWith('http://') || exampleValue.startsWith('https://')) {
+                          newErrors[`button_${index}_${btnIndex}_url`] = "Dynamic URL example value should not include http:// or https://. Provide only the parameter value.";
+                        } else {
+                          urlToValidate = urlToValidate + exampleValue;
+                        }
+                      }
+                    }
+                  }
+                  
+                  // Validate URL format using regex
+                  if (urlToValidate && (urlToValidate.startsWith('http://') || urlToValidate.startsWith('https://'))) {
+                    const urlPattern = /^https?:\/\/(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(?::[0-9]+)?(?:\/.*)?$/i;
+                    if (!urlPattern.test(urlToValidate)) {
+                      newErrors[`button_${index}_${btnIndex}_url`] = `Invalid URL format. URL must start with http:// or https:// and have a valid domain.`;
+                    }
+                  } else if (urlToValidate && !isDynamic) {
+                    // Only validate format if it's not a dynamic URL or if it should be a URL
+                    if (!urlToValidate.startsWith('http://') && !urlToValidate.startsWith('https://')) {
+                      newErrors[`button_${index}_${btnIndex}_url`] = "URL must start with http:// or https://";
+                    }
+                  }
                 }
               }
               
@@ -455,15 +554,15 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
       const isValid = Object.keys(newErrors).length === 0;
       setIsFormValid(isValid);
 
-      if (isSubmittedOnce) {
-        setErrors(newErrors);
-      }
+      // Always update errors so real-time validation works
+      // This ensures errors appear/disappear as user types
+      setErrors(newErrors);
     }, 300); // Debounce validation
 
     return () => {
       clearTimeout(handler);
     };
-  }, [validate, isSubmittedOnce]);
+  }, [validate]);
 
   const focusOnFirstError = (errors: Record<string, any>) => {
     const errorKeys = Object.keys(errors);
@@ -763,9 +862,19 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                                     onChange={e => handleExampleChange(example.param_name, e.target.value)}
                                     disabled={isLoading}
                                 />
+                                {!example.example?.trim() && (
+                                  <p className="text-xs text-orange-600 dark:text-orange-400">
+                                    ⚠ Example value is required for {`{{${example.param_name}}}`}
+                                  </p>
+                                )}
                             </div>
                         ))}
                         </div>
+                        {component.example.body_text_named_params.some((ex: any) => !ex.example?.trim()) && (
+                          <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">
+                            ⚠ Please provide example values for all variables in the body text
+                          </p>
+                        )}
                     </div>
                 )}
 
@@ -786,9 +895,19 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                                     onChange={e => handleExampleChange((i + 1).toString(), e.target.value)}
                                     disabled={isLoading}
                                 />
+                                {!example?.trim() && (
+                                  <p className="text-xs text-orange-600 dark:text-orange-400">
+                                    ⚠ Example value is required for {`{{${i + 1}}}`}
+                                  </p>
+                                )}
                             </div>
                         ))}
                         </div>
+                        {component.example.body_text[0].some((ex: string) => !ex?.trim()) && (
+                          <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">
+                            ⚠ Please provide example values for all variables in the body text
+                          </p>
+                        )}
                     </div>
                 )}
             </CardContent>
@@ -1134,88 +1253,142 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                     )}
                 </div>
                 
-                {button.type === 'URL' && (() => {
-                    const isDynamic = button.url.endsWith('{{1}}');
-                    const baseUrl = isDynamic ? button.url.slice(0, -5) : button.url;
 
-                    return (
-                      <div className="space-y-3">
-                        <Select
-                          value={isDynamic ? "dynamic" : "static"}
-                          onValueChange={(value) => {
-                            const newUrl =
-                              value === "dynamic"
-                                ? "https://example.com/{{1}}"
-                                : "https://example.com";
-                            const newExample =
-                              value === "dynamic"
-                                ? ["example-value"]
-                                : undefined;
-                            updateButton(index, {
-                              ...button,
-                              url: newUrl,
-                              example: newExample,
-                            });
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="static">Static URL</SelectItem>
-                            <SelectItem value="dynamic">Dynamic URL</SelectItem>
-                          </SelectContent>
-                        </Select>
+{button.type === "URL" && (() => {
+  // ---------- helpers ----------
+  const hasParam = (url: string) => /\{\{1\}\}/.test(url || "");
+  const stripParamAndAfter = (url: string) => (url || "").replace(/\{\{1\}\}.*$/, "");
+  const ensureDynamicAtEnd = (raw: string) => {
+    const noParam = stripParamAndAfter((raw || "").trim());
+    const base = noParam.replace(/\/+$/, "");
+    return `${base}/{{1}}`;
+  };
 
-                        {!isDynamic ? (
-                          <div>
-                            <Input
-                              placeholder="https://example.com"
-                              value={button.url}
-                              onChange={(e) =>
-                                updateButton(index, {
-                                  ...button,
-                                  url: e.target.value,
-                                })
-                              }
-                            />
-                            {errors[`button_${pIndex}_${index}_url`] && <p className="text-sm text-destructive mt-1">{errors[`button_${pIndex}_${index}_url`]}</p>}
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            <Label>URL Structure</Label>
-                            <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                              <Input
-                                className="bg-background"
-                                placeholder="Base URL"
-                                value={baseUrl}
-                                onChange={(e) =>
-                                  updateButton(index, {
-                                    ...button,
-                                    url: e.target.value.replace(/\/+$/, '') + "/{{1}}",
-                                  })
-                                }                                
-                              />
-                              <span className="p-2 bg-muted rounded-md text-muted-foreground text-sm font-mono shrink-0">{`{{1}}`}</span>
-                            </div>
-                            <div className="pt-2 space-y-2">
-                              <Label>Example Value for {`{{1}}`}</Label>
-                              <Input
-                                placeholder="e.g., product-123"
-                                onChange={(e) =>
-                                  updateButton(index, {
-                                    ...button,
-                                    example: [e.target.value],
-                                  })
-                                }
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
+  const urlHasParam = hasParam(button.url);
+  const hasExample = Array.isArray(button.example) && button.example.length > 0;
+  const isDynamic = urlHasParam || hasExample;
 
+  // compute current base from URL
+  const currentBaseFromUrl = urlHasParam
+    ? (button.url.match(/^(.+?)\{\{1\}\}/)?.[1] ?? stripParamAndAfter(button.url))
+    : (button.url || "");
+
+  // Type cast to allow draftBaseUrl (temporary property for UI state, not persisted)
+  const buttonWithDraft = button as any;
+  
+  // use draft if present, otherwise derived base
+  const baseInputValue = buttonWithDraft.draftBaseUrl ?? currentBaseFromUrl;
+
+  return (
+    <div className="space-y-3">
+      <Select
+        value={isDynamic ? "dynamic" : "static"}
+        onValueChange={(value) => {
+          if (value === "dynamic") {
+            const base = (buttonWithDraft.draftBaseUrl ?? currentBaseFromUrl) || "https://example.com";
+            const newUrl = ensureDynamicAtEnd(base);
+            const example = button.example?.length ? button.example : ["example-value"];
+            updateButton(index, { ...button, url: newUrl, example });
+          } else {
+            const staticUrl = stripParamAndAfter(button.url || "").replace(/\/+$/, "") || "https://example.com";
+            updateButton(index, { ...button, url: staticUrl, example: undefined });
+          }
+        }}
+      >
+        <SelectTrigger>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="static">Static URL</SelectItem>
+          <SelectItem value="dynamic">Dynamic URL</SelectItem>
+        </SelectContent>
+      </Select>
+
+      {!isDynamic ? (
+        // -------- static mode --------
+        <div>
+          <Input
+            placeholder="https://example.com"
+            value={button.url}
+            onChange={(e) => updateButton(index, { ...button, url: e.target.value })}
+            onBlur={(e) => {
+              const cleaned = e.target.value.trim().replace(/\/+$/, "");
+              if (cleaned !== button.url) updateButton(index, { ...button, url: cleaned });
+            }}
+          />
+          {errors[`button_${pIndex}_${index}_url`] && (
+            <p className="text-sm text-destructive mt-1">
+              {errors[`button_${pIndex}_${index}_url`]}
+            </p>
+          )}
+        </div>
+      ) : (
+        // -------- dynamic mode --------
+        <div className="space-y-2">
+          <Label>Base URL</Label>
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="https://example.com"
+              value={baseInputValue}
+              // only update the draft while typing
+              onChange={(e) => {
+                updateButton(index, { ...button, url: e.target.value });
+              }}
+              // format only on blur
+              onBlur={(e) => {
+                const finalUrl = ensureDynamicAtEnd(e.target.value);
+                updateButton(index, { ...button, url: finalUrl });
+              }}
+            />
+            <span className="p-2 bg-muted rounded-md text-muted-foreground text-sm font-mono shrink-0 whitespace-nowrap">
+              {"{{1}}"}
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            The dynamic parameter {"{{1}}"} will be appended after you leave the field.
+          </p>
+
+          {errors[`button_${pIndex}_${index}_url`] && (
+            <p className="text-sm text-destructive mt-1">
+              {errors[`button_${pIndex}_${index}_url`]}
+            </p>
+          )}
+
+          <div className="pt-2 space-y-2">
+            <Label>Value for {"{{1}}"}</Label>
+            <Input
+              placeholder="e.g., product-123"
+              value={button.example?.[0] || ""}
+              onChange={(e) =>
+                updateButton(index, {
+                  ...button,
+                  example: e.target.value ? [e.target.value] : undefined,
+                })
+              }
+              onBlur={(e) => {
+                const v = e.target.value.trim();
+                updateButton(index, { ...button, example: v ? [v] : ["example-value"] });
+              }}
+            />
+            {(button.example?.[0] || button.url) && (
+              <p className="text-xs text-muted-foreground">
+                Preview: {ensureDynamicAtEnd(stripParamAndAfter(button.url || "")).replace(/\{\{1\}\}/g, button.example?.[0] || "example")}
+              </p>
+            )}
+            {!button.example?.[0] && (
+              <p className="text-xs text-orange-600 dark:text-orange-400">
+                ⚠ Example value is required for dynamic URLs
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+})()}
+
+
+                
                 {button.type === 'PHONE_NUMBER' && (
                     <div className="mt-4 space-y-2">
                         <Label>Phone Number</Label>
@@ -1425,7 +1598,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
           <Button 
             variant="success" 
             onClick={handleSubmit} 
-            disabled={userErrors.length > 0 || isLoading}
+            disabled={userErrors.length > 0 || Object.keys(errors).length > 0 || isLoading}
           >
             {isLoading ? (
               <>

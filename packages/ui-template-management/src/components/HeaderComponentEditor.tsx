@@ -183,6 +183,11 @@ const HeaderComponentEditor: React.FC<HeaderComponentEditorProps> = ({
                             <div className="space-y-2">
                                 <Label htmlFor={`header-example-${index}`}>Example Value for {`{{1}}`}</Label>
                                 <Input id={`header-example-${index}`} placeholder="E.g., #12345" value={component.example?.header_text?.[0] || ''} onChange={e => handleExampleChange(e.target.value)} />
+                                {!component.example?.header_text?.[0]?.trim() && (
+                                  <p className="text-xs text-orange-600 dark:text-orange-400">
+                                    ⚠ Example value is required when using variables in header text
+                                  </p>
+                                )}
                             </div>
                         )}
                     </div>
