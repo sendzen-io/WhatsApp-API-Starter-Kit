@@ -6,6 +6,8 @@ import { Button } from '@workspace/ui-core/components/button';
 import { Input } from '@workspace/ui-core/components/input';
 import { Label } from '@workspace/ui-core/components/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@workspace/ui-core/components/select';
+import { Checkbox } from '@workspace/ui-core/components/checkbox';
+import { Textarea } from '@workspace/ui-core/components/textarea';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@workspace/ui-core/components/accordion';
 import { Badge } from '@workspace/ui-core/components/badge';
 import { Box, BoxContent, BoxDescription, BoxHeader, BoxTitle } from '@workspace/ui-core/components/box';
@@ -41,6 +43,9 @@ interface PlaygroundConfig {
   templatePlaceholders: Record<string, string>;
   wabaId: string;
   phoneNumberId: string;
+  isSessionMessage: boolean;
+  sessionMessageText: string;
+  sessionMessagePreviewUrl: boolean;
 }
 
 // Skeleton Components for Playground Loading States
@@ -423,6 +428,9 @@ export default function PlaygroundContainer({
     templatePlaceholders: {},
     wabaId: '',
     phoneNumberId: '',
+    isSessionMessage: false,
+    sessionMessageText: '',
+    sessionMessagePreviewUrl: false,
   });
 
   const [selectedLanguage, setSelectedLanguage] = useState('javascript');
@@ -1149,7 +1157,33 @@ export default function PlaygroundContainer({
   };
 
   const generateRequestBody = (config: PlaygroundConfig) => {
-    // Always use template format
+    const currentSelectedWaba = wabaOptions.find(w => w.value === config.selectedWaba);
+    
+    // If session message mode is enabled, generate session message body
+    if (config.isSessionMessage) {
+      if (apiEndpoint === 'facebook') {
+        return {
+          messaging_product: "whatsapp",
+          to: config.recipientPhone,
+          type: "text",
+          text: {
+            body: config.sessionMessageText
+          }
+        };
+      } else {
+        return {
+          from: currentSelectedWaba?.phone || '919099913506',
+          to: config.recipientPhone,
+          type: 'text',
+          text: {
+            body: config.sessionMessageText,
+            preview_url: config.sessionMessagePreviewUrl
+          }
+        };
+      }
+    }
+    
+    // Template message format (existing logic)
     if (config.selectedTemplate) {
       const templateBody = generateTemplateRequestBody(config);
       if (templateBody) {
@@ -1580,17 +1614,27 @@ curl -X POST '${url}' \\
       errors.recipientPhone = phoneValidation.error!;
     }
     
-    // Validate template
-    const templateValidation = validateTemplate(config.selectedTemplate);
-    if (!templateValidation.isValid) {
-      errors.selectedTemplate = templateValidation.error!;
-    }
-    
-    // Validate placeholders if template has them
-    if (Object.keys(config.templatePlaceholders).length > 0) {
-      const placeholderValidation = validateTemplatePlaceholders(config.templatePlaceholders);
-      if (!placeholderValidation.isValid) {
-        Object.assign(errors, placeholderValidation.errors);
+    // Validate based on message type
+    if (config.isSessionMessage) {
+      // Validate session message text
+      if (!config.sessionMessageText.trim()) {
+        errors.sessionMessageText = 'Session message text is required';
+      } else if (config.sessionMessageText.length > 4096) {
+        errors.sessionMessageText = 'Session message text cannot exceed 4096 characters';
+      }
+    } else {
+      // Validate template
+      const templateValidation = validateTemplate(config.selectedTemplate);
+      if (!templateValidation.isValid) {
+        errors.selectedTemplate = templateValidation.error!;
+      }
+      
+      // Validate placeholders if template has them
+      if (Object.keys(config.templatePlaceholders).length > 0) {
+        const placeholderValidation = validateTemplatePlaceholders(config.templatePlaceholders);
+        if (!placeholderValidation.isValid) {
+          Object.assign(errors, placeholderValidation.errors);
+        }
       }
     }
     
@@ -1619,6 +1663,8 @@ curl -X POST '${url}' \\
             elementToFocus = recipientPhoneRef.current;
           } else if (firstErrorField === 'selectedTemplate') {
             elementToFocus = templateSelectRef.current;
+          } else if (firstErrorField === 'sessionMessageText') {
+            elementToFocus = document.getElementById('session-message-text');
           } else {
             // For placeholder fields
             elementToFocus = placeholderRefs.current[firstErrorField];
@@ -1815,7 +1861,7 @@ curl -X POST '${url}' \\
               )}
               
               {/* Test API Call Button */}
-              {config.selectedTemplate && (
+              {(config.selectedTemplate || config.isSessionMessage) && (
                 <div className="mt-2 pt-2 border-t border-border">
                   <Button 
                     onClick={handleTestApiCall} 
@@ -2126,11 +2172,115 @@ curl -X POST '${url}' \\
               </div>
               
               <hr className="border-border" />
-              {/* Message Template */}
+              
+              {/* Message Type Toggle */}
               <div className="config-section">
-                <h3 className="flex items-center gap-2 text-base font-semibold mb-2 whitespace-nowrap">
-                  <MessageSquare className="h-4 w-4 flex-shrink-0" />
-                  <span>Message Templates</span>
+                <div className="flex items-center space-x-2 mb-4">
+                  <Checkbox
+                    id="session-message-toggle"
+                    checked={config.isSessionMessage}
+                    onCheckedChange={(checked) => {
+                      setConfig(prev => ({ 
+                        ...prev, 
+                        isSessionMessage: checked === true,
+                        selectedTemplate: checked === true ? '' : prev.selectedTemplate,
+                        templatePlaceholders: checked === true ? {} : prev.templatePlaceholders,
+                      }));
+                      // Clear API validation errors when toggling
+                      setApiValidationErrors(prev => {
+                        const newErrors = { ...prev };
+                        if (checked === true) {
+                          delete newErrors.selectedTemplate;
+                          Object.keys(newErrors).forEach(key => {
+                            if (key.startsWith('header_param_') || key.startsWith('body_param_') || key.startsWith('button_') || key === 'header_media_url') {
+                              delete newErrors[key];
+                            }
+                          });
+                        } else {
+                          delete newErrors.sessionMessageText;
+                        }
+                        return newErrors;
+                      });
+                    }}
+                  />
+                  <Label htmlFor="session-message-toggle" className="text-sm font-medium cursor-pointer">
+                    Send Session Message (Text Message)
+                  </Label>
+                </div>
+                <p className="text-xs text-muted-foreground mb-4">
+                  {config.isSessionMessage 
+                    ? 'Session messages are free-form text messages that can be sent within a 24-hour window after the user contacts you. They don\'t require template approval.'
+                    : 'Template messages are pre-approved message formats. Toggle above to switch to session messages.'}
+                </p>
+              </div>
+
+              {/* Session Message Input */}
+              {config.isSessionMessage && (
+                <div className="config-section mb-4">
+                  <Label htmlFor="session-message-text" className="text-sm font-medium mb-2 block">
+                    Session Message Text
+                  </Label>
+                  <Textarea
+                    id="session-message-text"
+                    value={config.sessionMessageText}
+                    onChange={(e) => {
+                      setConfig(prev => ({ ...prev, sessionMessageText: e.target.value }));
+                      // Clear API validation error for session message text
+                      setApiValidationErrors(prev => {
+                        const newErrors = { ...prev };
+                        delete newErrors.sessionMessageText;
+                        return newErrors;
+                      });
+                    }}
+                    placeholder="Enter your session message text here..."
+                    className={`w-full min-h-[100px] ${
+                      apiValidationErrors.sessionMessageText 
+                        ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                        : ''
+                    }`}
+                    maxLength={4096}
+                  />
+                  <div className="flex items-center justify-between mt-1">
+                    <div>
+                      {apiValidationErrors.sessionMessageText && (
+                        <div className="flex items-start gap-1 text-sm text-red-600">
+                          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                          <span>{apiValidationErrors.sessionMessageText}</span>
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {config.sessionMessageText.length} / 4096 characters
+                    </span>
+                  </div>
+                  
+                  {/* Preview URL Toggle */}
+                  <div className="flex items-center space-x-2 mt-3">
+                    <Checkbox
+                      id="session-preview-url"
+                      checked={config.sessionMessagePreviewUrl}
+                      onCheckedChange={(checked) => {
+                        setConfig(prev => ({ ...prev, sessionMessagePreviewUrl: checked === true }));
+                      }}
+                    />
+                    <Label htmlFor="session-preview-url" className="text-sm font-medium cursor-pointer">
+                      Enable Preview URL
+                    </Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    When enabled, URLs in the message will be shown with a preview card
+                  </p>
+                </div>
+              )}
+
+              <hr className="border-border" />
+              {/* Message Template */}
+              {!config.isSessionMessage && (
+                <React.Fragment>
+                <div className="config-section">
+                  <h3 className="flex items-center gap-2 text-base font-semibold mb-2 whitespace-nowrap">
+                    <MessageSquare className="h-4 w-4 flex-shrink-0" />
+                    <span>Message Templates</span>
                   {templatesError && (
                     <Button 
                       variant="outline" 
@@ -2268,6 +2418,7 @@ curl -X POST '${url}' \\
                       )}
                     </>
                   )}
+                </div>
                 </div>
               
               {/* WhatsApp Template Preview */}
@@ -2418,10 +2569,9 @@ curl -X POST '${url}' \\
                   </div>
                 </div>
               </>
-
               )}
-              
-              </div>
+              </React.Fragment>
+              )}
             </BoxContent>
           </Box>
         </div>
