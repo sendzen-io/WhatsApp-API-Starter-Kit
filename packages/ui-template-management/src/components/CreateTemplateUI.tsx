@@ -820,10 +820,10 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
     };
 
     return (
-        <Card key={index}>
-            <CardHeader>
-                <CardTitle>Body</CardTitle>
-                <CardDescription>
+        <Card key={index} className="overflow-hidden">
+            <CardHeader className="px-3 sm:px-6 pb-3">
+                <CardTitle className="text-base sm:text-lg">Body</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
                   The main message content. 
                   {parameterFormat === "NAMED" 
                     ? "Use named variables like {`{{variable_name}}`}. (Required)"
@@ -831,36 +831,38 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                   }
                 </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-3 sm:px-6">
                 <Textarea
                     id="body-textarea"
                     name="body-textarea"
                     placeholder="Enter your message body here..."
-                    style={{ minHeight: '150px', maxHeight: '300px' }}
+                    style={{ minHeight: '120px', maxHeight: '300px' }}
+                    className="text-base sm:text-sm resize-y"
                     rows={5}
                     maxLength={1024}
                     value={component.text}
                     onChange={e => handleBodyChange(e.target.value)}
                     disabled={isLoading}
                 />
-                <p className="text-sm text-muted-foreground mt-1">Max length: {component.text.length}/1024 characters</p>
-                {errors[`body_${index}`] && <p className="text-sm text-destructive mt-1">{errors[`body_${index}`]}</p>}
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">Max length: {component.text.length}/1024 characters</p>
+                {errors[`body_${index}`] && <p className="text-xs sm:text-sm text-destructive mt-1">{errors[`body_${index}`]}</p>}
                 {/* Named Parameters Examples */}
                 {(parameterFormat === "NAMED" && component.example?.body_text_named_params && component.example.body_text_named_params.length > 0) && (
                     <div className="mt-4 space-y-4 pt-4 border-t">
                         <div className="flex justify-between items-center">
-                            <h4 className="font-medium">Example Body Variables</h4>
+                            <h4 className="font-medium text-sm sm:text-base">Example Body Variables</h4>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4 sm:gap-y-6">
                         {component.example.body_text_named_params.map((example, i) => (
                             <div key={i} className="space-y-2 mb-2">
-                                <Label htmlFor={`body-var-${example.param_name}`}>Variable {`{{${example.param_name}}}`}</Label>
+                                <Label htmlFor={`body-var-${example.param_name}`} className="text-sm">Variable {`{{${example.param_name}}}`}</Label>
                                 <Input
                                     id={`body-var-${example.param_name}`}
                                     placeholder={`Example for {{${example.param_name}}}`}
                                     value={example.example || ''}
                                     onChange={e => handleExampleChange(example.param_name, e.target.value)}
                                     disabled={isLoading}
+                                    className="text-base sm:text-sm"
                                 />
                                 {!example.example?.trim() && (
                                   <p className="text-xs text-orange-600 dark:text-orange-400">
@@ -882,18 +884,19 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                 {(parameterFormat === "POSITIONAL" && component.example?.body_text && component.example.body_text[0] && component.example.body_text[0].length > 0) && (
                     <div className="mt-4 space-y-4 pt-4 border-t">
                         <div className="flex justify-between items-center">
-                            <h4 className="font-medium">Example Body Variables</h4>
+                            <h4 className="font-medium text-sm sm:text-base">Example Body Variables</h4>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4 sm:gap-y-6">
                         {component.example.body_text[0].map((example, i) => (
                             <div key={i} className="space-y-2 mb-2">
-                                <Label htmlFor={`body-var-${i + 1}`}>Variable {`{{${i + 1}}}`}</Label>
+                                <Label htmlFor={`body-var-${i + 1}`} className="text-sm">Variable {`{{${i + 1}}}`}</Label>
                                 <Input
                                     id={`body-var-${i + 1}`}
                                     placeholder={`Example for {{${i + 1}}}`}
                                     value={example || ''}
                                     onChange={e => handleExampleChange((i + 1).toString(), e.target.value)}
                                     disabled={isLoading}
+                                    className="text-base sm:text-sm"
                                 />
                                 {!example?.trim() && (
                                   <p className="text-xs text-orange-600 dark:text-orange-400">
@@ -916,21 +919,22 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
   };
 
   const renderFooter = (component: FooterComponent, index: number) => (
-    <Card key={index}>
-      <CardHeader>
+    <Card key={index} className="overflow-hidden">
+      <CardHeader className="px-3 sm:px-6 pb-3">
         <div className="flex justify-between items-center">
-          <CardTitle>Footer</CardTitle>
+          <CardTitle className="text-base sm:text-lg">Footer</CardTitle>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => removeComponent(index)}
+            className="h-8 w-8 sm:h-9 sm:w-9"
           >
-            <Trash2 className="h-4 w-4 text-destructive" />
+            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-destructive" />
           </Button>
         </div>
-        <CardDescription>Add an optional short line of text to the bottom of your message.</CardDescription>
+        <CardDescription className="text-xs sm:text-sm">Add an optional short line of text to the bottom of your message.</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-3 sm:px-6">
         <Input
           id={`footer-text-${index}`}
           placeholder="Enter footer text"
@@ -939,8 +943,9 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
             updateComponent(index, { ...component, text: e.target.value })
           }
           disabled={isLoading}
+          className="text-base sm:text-sm"
         />
-        {errors[`footer_${index}`] && <p className="text-sm text-destructive mt-1">{errors[`footer_${index}`]}</p>}
+        {errors[`footer_${index}`] && <p className="text-xs sm:text-sm text-destructive mt-1">{errors[`footer_${index}`]}</p>}
       </CardContent>
     </Card>
   );
@@ -1101,23 +1106,24 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
     const totalButtonCount = component.buttons.length;
 
     return (
-      <Card key={pIndex} id={`buttons-${pIndex}`}>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div className="flex-1">
-              <CardTitle>Buttons</CardTitle>
+      <Card key={pIndex} id={`buttons-${pIndex}`} className="overflow-hidden">
+        <CardHeader className="px-3 sm:px-6 pb-3">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+            <div className="flex-1 min-w-0">
+              <CardTitle className="text-base sm:text-lg">Buttons</CardTitle>
               <CardDescription className="mt-1">
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   Maximum 10 buttons total. Quick Reply (max 10), URL (max 2), Phone (max 1). Buttons automatically group by type. Swapping moves entire button groups to maintain proper sequence.
                 </p>
               </CardDescription>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
-                    <PlusCircle className="h-4 w-4 mr-2" />
-                    Add a Button
+                  <Button variant="outline" size="sm" className="text-xs sm:text-sm">
+                    <PlusCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Add a Button</span>
+                    <span className="sm:hidden">Add</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
@@ -1145,14 +1151,15 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={() => removeComponent(pIndex)}
+                className="h-8 w-8 sm:h-9 sm:w-9"
               >
-                <Trash2 className="h-4 w-4 text-destructive" />
+                <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-destructive" />
               </Button>
             </div>
           </div>
-           {errors[`buttons_${pIndex}`] && <p className="text-sm text-destructive mt-2">{errors[`buttons_${pIndex}`]}</p>}
+           {errors[`buttons_${pIndex}`] && <p className="text-xs sm:text-sm text-destructive mt-2">{errors[`buttons_${pIndex}`]}</p>}
         </CardHeader>
-        {component.buttons.length > 0 && <CardContent className="space-y-4">
+        {component.buttons.length > 0 && <CardContent className="space-y-4 px-3 sm:px-6">
           {component.buttons.map((button, index) => {
             const otherButtons = component.buttons.filter(
               (_, i) => i !== index
@@ -1196,46 +1203,46 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
             const disablePhone = !wouldMaintainGrouping('PHONE_NUMBER') || phoneCount >= 1;
 
             return (
-              <Card key={index} className="p-4">
-                <div className="flex justify-between items-center mb-4">
-                  <div className="flex items-center gap-2">
-                    <Label className="font-semibold">Button {index + 1}</Label>
-                    <div className="flex items-center">
+              <Card key={index} className="p-3 sm:p-4">
+                <div className="flex justify-between items-center mb-3 sm:mb-4 gap-2">
+                  <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+                    <Label className="font-semibold text-sm sm:text-base truncate">Button {index + 1}</Label>
+                    <div className="flex items-center gap-0.5 sm:gap-1">
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6"
+                        className="h-7 w-7 sm:h-8 sm:w-8"
                         disabled={index === 0}
                         title="Swap with previous button"
                         onClick={() => swapButtons(index, index - 1)}
                       >
-                        <ChevronUp className="h-4 w-4" />
+                        <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6"
+                        className="h-7 w-7 sm:h-8 sm:w-8"
                         disabled={index === component.buttons.length - 1}
                         title="Swap with next button"
                         onClick={() => swapButtons(index, index + 1)}
                       >
-                        <ChevronDown className="h-4 w-4" />
+                        <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeButton(index)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0" onClick={() => removeButton(index)}><Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-destructive"/></Button>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div className="space-y-2">
-                        <Label htmlFor={`btn-type-${index}`}>Button Type</Label>
+                        <Label htmlFor={`btn-type-${index}`} className="text-sm">Button Type</Label>
                         <Select value={button.type} onValueChange={(value) => {
                            const currentText = 'text' in button ? (button as any).text : '';
                            if (value === 'URL') updateButton(index, { type: 'URL', text: currentText, url: '' });
                            else if (value === 'PHONE_NUMBER') updateButton(index, { type: 'PHONE_NUMBER', text: currentText, phone_number: '' });
                            else if (value === 'QUICK_REPLY') updateButton(index, { type: 'QUICK_REPLY', text: currentText });
                         }}>
-                           <SelectTrigger id={`btn-type-${index}`}><SelectValue/></SelectTrigger>
+                           <SelectTrigger id={`btn-type-${index}`} className="text-base sm:text-sm"><SelectValue/></SelectTrigger>
                            <SelectContent>
                                <SelectItem value="QUICK_REPLY" disabled={disableQuickReply}>Quick Reply</SelectItem>
                                <SelectItem value="URL" disabled={disableUrl}>Visit Website (URL)</SelectItem>
@@ -1246,9 +1253,9 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
 
                     {'text' in button && (
                         <div className="space-y-2">
-                            <Label htmlFor={`btn-text-${index}`}>Button Text</Label>
-                            <Input id={`btn-text-${index}`} placeholder="Eg. View details" value={(button as any).text} onChange={e => updateButton(index, {...(button as any), text: e.target.value})} />
-                            {errors[`button_${pIndex}_${index}_text`] && <p className="text-sm text-destructive mt-1">{errors[`button_${pIndex}_${index}_text`]}</p>}
+                            <Label htmlFor={`btn-text-${index}`} className="text-sm">Button Text</Label>
+                            <Input id={`btn-text-${index}`} placeholder="Eg. View details" value={(button as any).text} onChange={e => updateButton(index, {...(button as any), text: e.target.value})} className="text-base sm:text-sm" />
+                            {errors[`button_${pIndex}_${index}_text`] && <p className="text-xs sm:text-sm text-destructive mt-1">{errors[`button_${pIndex}_${index}_text`]}</p>}
                         </div>
                     )}
                 </div>
@@ -1295,7 +1302,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
           }
         }}
       >
-        <SelectTrigger>
+        <SelectTrigger className="text-base sm:text-sm">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -1315,9 +1322,10 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
               const cleaned = e.target.value.trim().replace(/\/+$/, "");
               if (cleaned !== button.url) updateButton(index, { ...button, url: cleaned });
             }}
+            className="text-base sm:text-sm"
           />
           {errors[`button_${pIndex}_${index}_url`] && (
-            <p className="text-sm text-destructive mt-1">
+            <p className="text-xs sm:text-sm text-destructive mt-1">
               {errors[`button_${pIndex}_${index}_url`]}
             </p>
           )}
@@ -1325,11 +1333,12 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
       ) : (
         // -------- dynamic mode --------
         <div className="space-y-2">
-          <Label>Base URL</Label>
-          <div className="flex items-center gap-2">
+          <Label className="text-sm">Base URL</Label>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <Input
               placeholder="https://example.com"
               value={baseInputValue}
+              className="text-base sm:text-sm flex-1"
               // only update the draft while typing
               onChange={(e) => {
                 updateButton(index, { ...button, url: e.target.value });
@@ -1340,7 +1349,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                 updateButton(index, { ...button, url: finalUrl });
               }}
             />
-            <span className="p-2 bg-muted rounded-md text-muted-foreground text-sm font-mono shrink-0 whitespace-nowrap">
+            <span className="p-2 bg-muted rounded-md text-muted-foreground text-xs sm:text-sm font-mono shrink-0 whitespace-nowrap text-center sm:text-left">
               {"{{1}}"}
             </span>
           </div>
@@ -1349,13 +1358,13 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
           </p>
 
           {errors[`button_${pIndex}_${index}_url`] && (
-            <p className="text-sm text-destructive mt-1">
+            <p className="text-xs sm:text-sm text-destructive mt-1">
               {errors[`button_${pIndex}_${index}_url`]}
             </p>
           )}
 
           <div className="pt-2 space-y-2">
-            <Label>Value for {"{{1}}"}</Label>
+            <Label className="text-sm">Value for {"{{1}}"}</Label>
             <Input
               placeholder="e.g., product-123"
               value={button.example?.[0] || ""}
@@ -1369,6 +1378,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                 const v = e.target.value.trim();
                 updateButton(index, { ...button, example: v ? [v] : ["example-value"] });
               }}
+              className="text-base sm:text-sm"
             />
             {(button.example?.[0] || button.url) && (
               <p className="text-xs text-muted-foreground">
@@ -1391,9 +1401,9 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                 
                 {button.type === 'PHONE_NUMBER' && (
                     <div className="mt-4 space-y-2">
-                        <Label>Phone Number</Label>
-                        <Input placeholder="Enter a valid phone number" value={button.phone_number} onChange={e => updateButton(index, {...button, phone_number: e.target.value})} />
-                        {errors[`button_${pIndex}_${index}_phone`] && <p className="text-sm text-destructive mt-1">{errors[`button_${pIndex}_${index}_phone`]}</p>}
+                        <Label className="text-sm">Phone Number</Label>
+                        <Input placeholder="Enter a valid phone number" value={button.phone_number} onChange={e => updateButton(index, {...button, phone_number: e.target.value})} className="text-base sm:text-sm" />
+                        {errors[`button_${pIndex}_${index}_phone`] && <p className="text-xs sm:text-sm text-destructive mt-1">{errors[`button_${pIndex}_${index}_phone`]}</p>}
                     </div>
                 )}
               </Card>
@@ -1405,7 +1415,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
   };
 
   return (
-    <div className="p-4 sm:p-8">
+    <div className="p-2 sm:p-4 md:p-8">
       <Card className="max-w-4xl mx-auto relative">
         {isLoading && (
           <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex items-center justify-center">
@@ -1416,18 +1426,18 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
             </div>
           </div>
         )}
-        <CardHeader>
-          <CardTitle>{dict.title}</CardTitle>
-          <CardDescription>
+        <CardHeader className="px-3 sm:px-6">
+          <CardTitle className="text-lg sm:text-xl">{dict.title}</CardTitle>
+          <CardDescription className="text-sm">
             {dict.description}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-8">
+        <CardContent className="space-y-6 sm:space-y-8 px-3 sm:px-6">
           {/* Basic Info */}
-          <div className="space-y-6">
-            <div className="grid grid-cols-12 gap-6">
-              <div className="col-span-6 space-y-2">
-                <Label htmlFor="template-name">{dict.templateName}</Label>
+          <div className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 sm:gap-6">
+              <div className="sm:col-span-6 space-y-2">
+                <Label htmlFor="template-name" className="text-sm font-medium">{dict.templateName}</Label>
                 <Input
                   id="template-name"
                   placeholder={dict.templateNamePlaceholder}
@@ -1440,14 +1450,15 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                     }
                   }}
                   disabled={isLoading}
+                  className="text-base sm:text-sm"
                 />
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   {dict.templateNameHelp}
                 </p>
-                {errors.name && <p className="text-sm text-destructive mt-1">{errors.name}</p>}
+                {errors.name && <p className="text-xs sm:text-sm text-destructive mt-1">{errors.name}</p>}
               </div>
-              <div className="col-span-3 space-y-2">
-                <Label htmlFor="template-language">{dict.language}</Label>
+              <div className="sm:col-span-3 space-y-2">
+                <Label htmlFor="template-language" className="text-sm font-medium">{dict.language}</Label>
                 <Select value={language} onValueChange={(value) => {
                   setLanguage(value);
                   // Clear API errors when user makes changes
@@ -1455,7 +1466,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                     setApiErrors([]);
                   }
                 }} disabled={isLoading}>
-                  <SelectTrigger id="template-language">
+                  <SelectTrigger id="template-language" className="text-base sm:text-sm">
                     <SelectValue placeholder={dict.languagePlaceholder} />
                   </SelectTrigger>
                   <SelectContent>
@@ -1466,12 +1477,12 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.language && <p className="text-sm text-destructive mt-1">{errors.language}</p>}
+                {errors.language && <p className="text-xs sm:text-sm text-destructive mt-1">{errors.language}</p>}
               </div>
-              <div className="col-span-3 space-y-2">
-                <Label htmlFor="template-category">{dict.category}</Label>
+              <div className="sm:col-span-3 space-y-2">
+                <Label htmlFor="template-category" className="text-sm font-medium">{dict.category}</Label>
                 <Select value={category} onValueChange={handleCategoryChange} disabled={isLoading}>
-                  <SelectTrigger id="template-category">
+                  <SelectTrigger id="template-category" className="text-base sm:text-sm">
                     <SelectValue placeholder={dict.categoryPlaceholder} />
                   </SelectTrigger>
                   <SelectContent>
@@ -1482,7 +1493,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                     </SelectItem>
                   </SelectContent>
                 </Select>
-                {errors.category && <p className="text-sm text-destructive mt-1">{errors.category}</p>}
+                {errors.category && <p className="text-xs sm:text-sm text-destructive mt-1">{errors.category}</p>}
               </div>
             </div>
           </div>
@@ -1490,26 +1501,29 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
           <Separator />
 
           {category !== "AUTHENTICATION" ? (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h3 className="text-xl font-semibold">{dict.components}</h3>
-                <div className="flex items-center gap-2">
+            <div className="space-y-4 sm:space-y-6">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-2">
+                <h3 className="text-lg sm:text-xl font-semibold">{dict.components}</h3>
+                <div className="flex flex-wrap items-center gap-2">
                   {!components.some((c) => c.type === "HEADER") && (
-                    <Button variant="outline" onClick={() => addComponent("HEADER")} disabled={isLoading}>
-                      <PlusCircle className="h-4 w-4 mr-2" />
-                      {dict.addHeader}
+                    <Button variant="outline" onClick={() => addComponent("HEADER")} disabled={isLoading} size="sm" className="text-xs sm:text-sm">
+                      <PlusCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">{dict.addHeader}</span>
+                      <span className="sm:hidden">Header</span>
                     </Button>
                   )}
                   {!components.some((c) => c.type === "FOOTER") && (
-                    <Button variant="outline" onClick={() => addComponent("FOOTER")} disabled={isLoading}>
-                      <PlusCircle className="h-4 w-4 mr-2" />
-                      {dict.addFooter}
+                    <Button variant="outline" onClick={() => addComponent("FOOTER")} disabled={isLoading} size="sm" className="text-xs sm:text-sm">
+                      <PlusCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">{dict.addFooter}</span>
+                      <span className="sm:hidden">Footer</span>
                     </Button>
                   )}
                   {!components.some((c) => c.type === "BUTTONS") && (
-                    <Button variant="outline" onClick={() => addComponent("BUTTONS")} disabled={isLoading}>
-                      <PlusCircle className="h-4 w-4 mr-2" />
-                      {dict.addButtons}
+                    <Button variant="outline" onClick={() => addComponent("BUTTONS")} disabled={isLoading} size="sm" className="text-xs sm:text-sm">
+                      <PlusCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">{dict.addButtons}</span>
+                      <span className="sm:hidden">Buttons</span>
                     </Button>
                   )}
                 </div>
@@ -1591,18 +1605,19 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
             </Alert>
           )}
         </CardContent>
-        <CardFooter className="flex justify-end gap-4">
-          <Button variant="outline" onClick={onCancel} disabled={isLoading}>
+        <CardFooter className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 px-3 sm:px-6 pb-3 sm:pb-6">
+          <Button variant="outline" onClick={onCancel} disabled={isLoading} className="w-full sm:w-auto text-sm sm:text-base">
             {dict.cancel}
           </Button>
           <Button 
             variant="success" 
             onClick={handleSubmit} 
             disabled={userErrors.length > 0 || Object.keys(errors).length > 0 || isLoading}
+            className="w-full sm:w-auto text-sm sm:text-base"
           >
             {isLoading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                 {dict.loading.creatingTemplate}
               </>
             ) : (
