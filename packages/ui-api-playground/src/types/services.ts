@@ -76,5 +76,12 @@ export interface PlaygroundContainerProps {
   wabaService: IWABAService;
   templateService: ITemplateService;
   apiEndpoint?: 'sendzen' | 'facebook'; // 'sendzen' for product, 'facebook' for api-playground
+  dictionary?: {
+    apiResponse?: {
+      activityLogNote?: string;
+      activityLogLink?: string;
+      activityLogNoteSuffix?: string;
+    };
+  };
 }
 

@@ -4,7 +4,7 @@ import React from 'react';
 import { Box, BoxContent, BoxHeader, BoxTitle } from '@workspace/ui-core/components/box';
 import { Button } from '@workspace/ui-core/components/button';
 import { Badge } from '@workspace/ui-core/components/badge';
-import { Check, Play, FileText } from 'lucide-react';
+import { Check, Play, FileText, ExternalLink } from 'lucide-react';
 import { PlaygroundConfig } from '../utils/requestBodyGenerators';
 
 interface ApiResponseSectionProps {
@@ -15,6 +15,13 @@ interface ApiResponseSectionProps {
   requestDuration: number | null;
   handleTestApiCall: () => void;
   config: PlaygroundConfig;
+  dictionary?: {
+    apiResponse?: {
+      activityLogNote?: string;
+      activityLogLink?: string;
+      activityLogNoteSuffix?: string;
+    };
+  };
 }
 
 export const ApiResponseSection: React.FC<ApiResponseSectionProps> = ({
@@ -24,8 +31,41 @@ export const ApiResponseSection: React.FC<ApiResponseSectionProps> = ({
   apiError,
   requestDuration,
   handleTestApiCall,
-  config
+  config,
+  dictionary
 }) => {
+  // Default English translations
+  const defaultTranslations = {
+    activityLogNote: '💡 You can visit the',
+    activityLogLink: 'Activity log',
+    activityLogNoteSuffix: 'to see your message delivery status.'
+  };
+
+  // Use dictionary translations if available, otherwise use defaults
+  const translations = dictionary?.apiResponse || defaultTranslations;
+  // Valid locales from the i18n config
+  const validLocales = ['en', 'es', 'de', 'pt', 'ru', 'it', 'fr'];
+  const defaultLocale = 'en';
+
+  // Helper function to get the notifications URL with proper locale handling
+  const getNotificationsUrl = (): string => {
+    if (typeof window === 'undefined') {
+      return '/notifications';
+    }
+
+    const pathname = window.location.pathname;
+    const localeMatch = pathname.match(/^\/([^/]+)/);
+    const firstSegment = localeMatch?.[1] ?? '';
+
+    // Check if first segment is a valid locale
+    const locale = firstSegment && validLocales.includes(firstSegment) ? firstSegment : defaultLocale;
+
+    // For default locale (en), don't add prefix; for others, add locale prefix
+    if (locale === defaultLocale) {
+      return '/notifications';
+    }
+    return `/${locale}/notifications`;
+  };
   return (
     <Box className="flex flex-col flex-1 min-h-0 shadow-sm hover:shadow-md transition-shadow border rounded-lg">
       <BoxHeader className="pb-3">
@@ -36,7 +76,7 @@ export const ApiResponseSection: React.FC<ApiResponseSectionProps> = ({
           API Response
         </BoxTitle>
       </BoxHeader>
-      
+
       <BoxContent className="flex-1 min-h-0 overflow-hidden flex flex-col">
         {isLoading ? (
           <div className="response-loading flex items-center justify-center h-full">
@@ -49,11 +89,10 @@ export const ApiResponseSection: React.FC<ApiResponseSectionProps> = ({
         ) : showResponse ? (
           <div className="response-content space-y-2">
             <div className="response-header flex items-center gap-2 flex-wrap">
-              <Badge className={`text-sm ${
-                apiResponse?.status >= 200 && apiResponse?.status < 300
-                  ? 'bg-green-100 text-green-800 hover:bg-green-100'
-                  : 'bg-red-100 text-red-800 hover:bg-red-100'
-              }`}>
+              <Badge className={`text-sm ${apiResponse?.status >= 200 && apiResponse?.status < 300
+                ? 'bg-green-100 text-green-800 hover:bg-green-100'
+                : 'bg-red-100 text-red-800 hover:bg-red-100'
+                }`}>
                 {apiResponse?.status || 'Error'} {apiResponse?.statusText}
               </Badge>
               <span className="text-sm text-muted-foreground">POST /v1/messages</span>
@@ -63,20 +102,19 @@ export const ApiResponseSection: React.FC<ApiResponseSectionProps> = ({
                 </Badge>
               )}
             </div>
-            
+
             {apiError && (
               <div className="error-message bg-red-50 border border-red-200 rounded p-2">
                 <p className="text-sm text-red-800 font-medium">Error:</p>
                 <p className="text-sm text-red-700">{apiError}</p>
               </div>
             )}
-            
+
             <div className="response-json-container flex-1 overflow-auto max-h-32">
               <pre className="bg-muted p-2 rounded text-sm font-mono overflow-x-auto border border-border">
                 {JSON.stringify(apiResponse?.data || { error: 'No response data' }, null, 2)}
               </pre>
             </div>
-            
           </div>
         ) : (
           <div className="response-placeholder flex items-center justify-center h-full">
@@ -86,14 +124,13 @@ export const ApiResponseSection: React.FC<ApiResponseSectionProps> = ({
             </div>
           </div>
         )}
-        
         {/* Test API Call Button */}
         {(config.selectedTemplate || config.isSessionMessage) && (
           <div className="mt-2 pt-2 border-t border-border">
-            <Button 
-              onClick={handleTestApiCall} 
+            <Button
+              onClick={handleTestApiCall}
               variant="success"
-              className="w-full" 
+              className="w-full"
               size="sm"
               disabled={isLoading}
             >
@@ -102,6 +139,24 @@ export const ApiResponseSection: React.FC<ApiResponseSectionProps> = ({
             </Button>
           </div>
         )}
+
+        <div className="mt-2 pt-2 border-t border-border">
+          <div className="rounded p-2.5">
+            <p className="text-sm text-muted-foreground">
+              {translations.activityLogNote}{' '}
+              <a
+                href={getNotificationsUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline font-medium inline-flex items-center gap-1"
+              >
+                {translations.activityLogLink}
+                <ExternalLink className="w-3 h-3" />
+              </a>
+              {' '}{translations.activityLogNoteSuffix}
+            </p>
+          </div>
+        </div>
       </BoxContent>
     </Box>
   );

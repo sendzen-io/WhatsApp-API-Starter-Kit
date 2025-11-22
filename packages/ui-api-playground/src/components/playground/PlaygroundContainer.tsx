@@ -104,7 +104,8 @@ const FacebookTemplatesSkeleton = () => (
 export default function PlaygroundContainer({ 
   wabaService, 
   templateService,
-  apiEndpoint = 'facebook' // Default to Facebook Graph API for API Playground
+  apiEndpoint = 'facebook', // Default to Facebook Graph API for API Playground
+  dictionary
 }: PlaygroundContainerProps) {
   const [config, setConfig] = useState<PlaygroundConfig>({
     accessToken: '',
@@ -689,6 +690,7 @@ export default function PlaygroundContainer({
             requestDuration={requestDuration}
             handleTestApiCall={handleTestApiCall}
             config={config}
+            dictionary={dictionary}
           />
         </div>
         
