@@ -50,8 +50,7 @@ import { AlertTriangle, CheckCircle, Info } from "lucide-react";
 interface CreateTemplateUIProps {
   onCancel: () => void;
   onSubmit: (template: CreateTemplatePayload) => Promise<void>;
-  dictionary?: any; // Will be properly typed when passed from TemplateManager
-  onFileUpload?: (file: File) => Promise<string>;
+  dictionary?: any;
   isLoading?: boolean;
 }
 
@@ -116,7 +115,6 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
   onCancel,
   onSubmit,
   dictionary,
-  onFileUpload,
   isLoading = false,
 }) => {
   // Use dictionary with fallback to English text
@@ -1533,7 +1531,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                 {components.map((component, index) => {
                   switch (component.type) {
                     case "HEADER":
-                      return <HeaderComponentEditor key={index} component={component as HeaderComponent} index={index} updateComponent={updateComponent} removeComponent={removeComponent} onFileUpload={onFileUpload} errors={errors} />;
+                      return <HeaderComponentEditor key={index} component={component as HeaderComponent} index={index} updateComponent={updateComponent} removeComponent={removeComponent} errors={errors} />;
                     case "BODY":
                       return renderBody(component as BodyComponent, index);
                     case "FOOTER":

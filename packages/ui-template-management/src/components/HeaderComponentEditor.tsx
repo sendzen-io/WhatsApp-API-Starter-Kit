@@ -35,7 +35,6 @@ interface HeaderComponentEditorProps {
     index: number;
     updateComponent: (index: number, component: HeaderComponent) => void;
     removeComponent: (index: number) => void;
-    onFileUpload?: (file: File) => Promise<string>;
     errors?: Record<string, any>;
 }
 
@@ -44,7 +43,6 @@ const HeaderComponentEditor: React.FC<HeaderComponentEditorProps> = ({
     index,
     updateComponent,
     removeComponent,
-    onFileUpload,
     errors,
 }) => {
     const [isUploading, setIsUploading] = useState(false);

@@ -229,7 +229,6 @@ interface TemplateManagerProps {
   onEdit: (templateId: string) => void;
   onCopy: (templateBody: string) => void;
   onDelete: (templateId: string) => void;
-  onFileUpload?: (file: File) => Promise<string>;
   // Pagination handlers
   onNextPage?: () => void;
   onPreviousPage?: () => void;
@@ -982,7 +981,6 @@ const TemplateManager: React.FC<TemplateManagerProps> = ({
   onEdit,
   onCopy,
   onDelete,
-  onFileUpload,
   onNextPage,
   onPreviousPage,
 }) => {
@@ -1016,7 +1014,6 @@ const TemplateManager: React.FC<TemplateManagerProps> = ({
         onCancel={handleCancelCreate}
         onSubmit={handleCreateTemplate}
         dictionary={dict}
-        onFileUpload={onFileUpload}
         isLoading={creatingTemplate}
       />
     );

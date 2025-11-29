@@ -109,7 +109,6 @@ export class FileUploadService {
    */
   private async createUploadSession(params: FileUploadParams): Promise<UploadSessionResponse> {
     const appId = await this.getAppId();
-    console.log('appId', appId);
     
     const queryParams = new URLSearchParams({
       file_name: params.fileName,
@@ -140,13 +139,11 @@ export class FileUploadService {
 
       // Check if response has content before trying to parse JSON
       const responseText = await response.text();
-      console.log('Upload session response text:', responseText);
       
       let data: any = {};
       if (responseText.trim()) {
         try {
           data = JSON.parse(responseText);
-          console.log('Upload session response data:', data);
         } catch (parseError) {
           throw new Error(`Invalid JSON response from upload session creation: ${responseText}`);
         }
@@ -203,15 +200,12 @@ export class FileUploadService {
 
       // Check if response has content before trying to parse JSON
       const responseText = await response.text();
-      console.log('File upload response text:', responseText);
       
       let data: any = {};
       if (responseText.trim()) {
         try {
           data = JSON.parse(responseText);
-          console.log('File upload response data:', data);
         } catch (parseError) {
-          console.warn('Response is not valid JSON, treating as successful upload');
           // If response is not JSON but status is 200, consider it successful
           return {
             success: true,
