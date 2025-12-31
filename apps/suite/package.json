@@ -7,13 +7,13 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "lint:fix": "next lint --fix",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@workspace/ui-core": "workspace:*",
-    "next": "^15.2.6",
+    "next": "16.0.7",
     "react": "^19.2.1",
     "react-dom": "^19.2.1"
   },

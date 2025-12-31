@@ -131,7 +131,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
     categories: {
       marketing: "Marketing",
       utility: "Utility",
-      authentication: "Authentication",
+      authentication: "Authentication (OTP)",
     },
     components: "Components",
     addHeader: "Add Header",
@@ -163,6 +163,10 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
     },
     cancel: "Cancel",
     createTemplate: "Create Template",
+    note: "Note:",
+    warning: "Warning:",
+    utilityCategoryNote: "For utility templates, Meta may change your template category to Marketing automatically. Please keep checking the status of your template regularly.",
+    otpWarning: "Your template contains the word \"OTP\" and the category is not Authentication. This template may be rejected by Meta. It's better to use an Authentication Template if you're sending an OTP.",
   };
   const [name, setName] = useState("");
   const [language, setLanguage] = useState("en_US");
@@ -1478,19 +1482,54 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                 {errors.language && <p className="text-xs sm:text-sm text-destructive mt-1">{errors.language}</p>}
               </div>
               <div className="sm:col-span-3 space-y-2">
-                <Label htmlFor="template-category" className="text-sm font-medium">{dict.category}</Label>
-                <Select value={category} onValueChange={handleCategoryChange} disabled={isLoading}>
-                  <SelectTrigger id="template-category" className="text-base sm:text-sm">
-                    <SelectValue placeholder={dict.categoryPlaceholder} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="MARKETING">{dict.categories.marketing}</SelectItem>
-                    <SelectItem value="UTILITY">{dict.categories.utility}</SelectItem>
-                    <SelectItem value="AUTHENTICATION">
+                <Label className="text-sm font-medium">{dict.category}</Label>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      id="category-marketing"
+                      name="template-category"
+                      value="MARKETING"
+                      checked={category === "MARKETING"}
+                      onChange={(e) => handleCategoryChange(e.target.value as "MARKETING" | "UTILITY" | "AUTHENTICATION")}
+                      disabled={isLoading}
+                      className="h-4 w-4 text-primary focus:ring-primary"
+                    />
+                    <Label htmlFor="category-marketing" className="text-sm font-normal cursor-pointer">
+                      {dict.categories.marketing}
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      id="category-utility"
+                      name="template-category"
+                      value="UTILITY"
+                      checked={category === "UTILITY"}
+                      onChange={(e) => handleCategoryChange(e.target.value as "MARKETING" | "UTILITY" | "AUTHENTICATION")}
+                      disabled={isLoading}
+                      className="h-4 w-4 text-primary focus:ring-primary"
+                    />
+                    <Label htmlFor="category-utility" className="text-sm font-normal cursor-pointer">
+                      {dict.categories.utility}
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      id="category-authentication"
+                      name="template-category"
+                      value="AUTHENTICATION"
+                      checked={category === "AUTHENTICATION"}
+                      onChange={(e) => handleCategoryChange(e.target.value as "MARKETING" | "UTILITY" | "AUTHENTICATION")}
+                      disabled={isLoading}
+                      className="h-4 w-4 text-primary focus:ring-primary"
+                    />
+                    <Label htmlFor="category-authentication" className="text-sm font-normal cursor-pointer">
                       {dict.categories.authentication}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                    </Label>
+                  </div>
+                </div>
                 {errors.category && <p className="text-xs sm:text-sm text-destructive mt-1">{errors.category}</p>}
               </div>
             </div>
@@ -1602,6 +1641,36 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
               </AlertDescription>
             </Alert>
           )}
+
+          {/* Utility Category Note */}
+          {category === "UTILITY" && (
+            <Alert className="border-blue-600 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20">
+              <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <AlertDescription>
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  <strong>{dict.note || "Note:"}</strong> {dict.utilityCategoryNote || "For utility templates, Meta may change your template category to Marketing automatically. Please keep checking the status of your template regularly."}
+                </p>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* OTP Warning - Show if body contains "OTP" and category is not AUTHENTICATION */}
+          {category !== "AUTHENTICATION" && (() => {
+            const bodyComponent = components.find(c => c.type === 'BODY') as BodyComponent | undefined;
+            const bodyText = bodyComponent?.text || '';
+            const hasOtp = /\bOTP\b/i.test(bodyText);
+            
+            return hasOtp ? (
+              <Alert className="border-lime-200 dark:border-lime-800 bg-lime-50 dark:bg-lime-950/20">
+                <AlertTriangle className="h-4 w-4 text-lime-600 dark:text-lime-400" />
+                <AlertDescription>
+                  <p className="text-sm text-lime-800 dark:text-lime-200">
+                    <strong>{dict.warning || "Warning:"}</strong> {dict.otpWarning || "Your template contains the word \"OTP\" and the category is not Authentication. This template may be rejected by Meta. It's better to use an Authentication Template if you're sending an OTP."}
+                  </p>
+                </AlertDescription>
+              </Alert>
+            ) : null;
+          })()}
         </CardContent>
         <CardFooter className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 px-3 sm:px-6 pb-3 sm:pb-6">
           <Button variant="outline" onClick={onCancel} disabled={isLoading} className="w-full sm:w-auto text-sm sm:text-base">
