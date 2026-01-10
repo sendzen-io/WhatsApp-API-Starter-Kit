@@ -1073,7 +1073,7 @@ const TemplateManager: React.FC<TemplateManagerProps> = ({
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 template-header">
         <div className="template-header-content">
-          <h1 className="text-3xl font-bold tracking-tight template-title">
+          <h1 className="text-2xl font-bold tracking-tight template-title">
             {dict.templates.template_management}
           </h1>
           {/* <p className="text-muted-foreground mt-1 template-description">
