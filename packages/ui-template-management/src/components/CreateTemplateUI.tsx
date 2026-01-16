@@ -519,12 +519,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                   }
                   
                   // Validate URL format using regex
-                  if (urlToValidate && (urlToValidate.startsWith('http://') || urlToValidate.startsWith('https://'))) {
-                    const urlPattern = /^https?:\/\/(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(?::[0-9]+)?(?:\/.*)?$/i;
-                    if (!urlPattern.test(urlToValidate)) {
-                      newErrors[`button_${index}_${btnIndex}_url`] = `Invalid URL format. URL must start with http:// or https:// and have a valid domain.`;
-                    }
-                  } else if (urlToValidate && !isDynamic) {
+                  if (urlToValidate && !isDynamic) {
                     // Only validate format if it's not a dynamic URL or if it should be a URL
                     if (!urlToValidate.startsWith('http://') && !urlToValidate.startsWith('https://')) {
                       newErrors[`button_${index}_${btnIndex}_url`] = "URL must start with http:// or https://";
