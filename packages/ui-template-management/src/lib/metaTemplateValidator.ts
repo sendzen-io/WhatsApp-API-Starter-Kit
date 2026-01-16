@@ -321,20 +321,11 @@ export class MetaTemplateValidator {
       return { isValid: false, error: 'URL is required' };
     }
 
-    // Comprehensive URL regex pattern
-    // Supports: http://, https://, www., and various TLDs
-    // Allows ports, paths, query strings, and fragments
-    const urlPattern = /^https?:\/\/(?:[-\w.])+(?::[0-9]+)?(?:\/(?:[\w\/_.])*)?(?:\?(?:[-\w&=%.])*)?(?:#(?:[-\w.])*)?$/i;
+    // Simplified URL check: just verify http:// or https:// prefix
+    const prefixPattern = /^https?:\/\/.+/i;
     
-    // Also check for valid domain structure
-    const domainPattern = /^https?:\/\/(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}(?::[0-9]+)?(?:\/.*)?$/i;
-    
-    if (!urlPattern.test(url)) {
+    if (!prefixPattern.test(url)) {
       return { isValid: false, error: 'Invalid URL format. URL must start with http:// or https://' };
-    }
-
-    if (!domainPattern.test(url)) {
-      return { isValid: false, error: 'Invalid URL format. Please provide a valid domain name' };
     }
 
     return { isValid: true };
@@ -1144,7 +1135,7 @@ export class MetaTemplateValidator {
       'BUTTON_TEXT_TOO_LONG': 'Button text is too long',
       'URL_BUTTON_MISSING_URL': 'URL button must have url',
       'URL_TOO_LONG': 'URL is too long',
-      'URL_INVALID_FORMAT': 'Invalid URL format. URL must start with http:// or https:// and have a valid domain',
+      'URL_INVALID_FORMAT': 'Invalid URL format. URL must start with http:// or https://',
       'URL_INVALID_DYNAMIC_FORMAT': 'Dynamic URL must have a valid base URL before {{1}}. Example: https://example.com/{{1}}',
       'URL_INVALID_DYNAMIC_BASE': 'Dynamic URL base must start with http:// or https://. Example: https://example.com/{{1}}',
       'URL_INVALID_EXAMPLE_FORMAT': 'Example value should not include http:// or https://. Enter only the dynamic part (e.g., "product-123" for https://example.com/{{1}}).',
