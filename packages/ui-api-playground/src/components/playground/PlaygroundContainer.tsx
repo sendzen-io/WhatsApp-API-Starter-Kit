@@ -1158,7 +1158,7 @@ export default function PlaygroundContainer({
                                 onClick={() => {
                                   if (apiEndpoint === 'sendzen') {
                                     // Product context: navigate to our template creation page
-                                    window.location.href = '/templates/create';
+                                    window.location.href = '/whatsapp-api/templates/create';
                                   } else {
                                     // API Playground context: open Meta Business Manager
                                     window.open('https://business.facebook.com/wa/manage/message-templates/', '_blank');
