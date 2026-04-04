@@ -15,10 +15,10 @@
     "jsx": "preserve",
     "incremental": true,
     "plugins": [{ "name": "next" }],
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
-    }
+      "@/*": ["./src/*"],
+      "*": ["./*"]
+    },
   },
   "include": ["src", "tsup.config.ts", "next-env.d.ts"],
   "exclude": ["node_modules", "dist"]
