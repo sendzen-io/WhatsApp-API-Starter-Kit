@@ -102,6 +102,7 @@ export interface TemplateManagerDictionary {
     no_templates_desc: string;
     create_first_template: string;
     rejected: string;
+    useInCampaign: string;
     delete_confirmation: {
       title: string;
       description: string;
@@ -229,6 +230,7 @@ interface TemplateManagerProps {
   onEdit: (templateId: string) => void;
   onCopy: (templateBody: string) => void;
   onDelete: (templateId: string) => void;
+  onUseCampaign?: (template: MessageTemplate) => void;
   // Pagination handlers
   onNextPage?: () => void;
   onPreviousPage?: () => void;
@@ -261,6 +263,7 @@ export const fallbackDictionary: TemplateManagerDictionary = {
       "Get started by creating your first WhatsApp message template",
     create_first_template: "Create Your First Template",
     rejected: "Rejected",
+    useInCampaign: "Use in Campaign",
     delete_confirmation: {
       title: "Delete Template",
       description: "Are you sure you want to delete this template? This action cannot be undone.",
@@ -429,6 +432,7 @@ interface TemplateCardProps {
   onEdit: (templateId: string) => void;
   onCopy: (templateBody: string) => void;
   onDelete: (templateId: string) => void;
+  onUseCampaign?: (template: MessageTemplate) => void;
   dictionary: TemplateManagerDictionary;
   hideActions?: boolean;
 }
@@ -440,6 +444,7 @@ export function TemplateCard({
   onEdit,
   onCopy,
   onDelete,
+  onUseCampaign,
   dictionary,
   hideActions = false,
 }: TemplateCardProps) {
@@ -645,7 +650,7 @@ export function TemplateCard({
 
   return (
     <TooltipProvider>
-      <Card className={`group transition-all duration-300 border-border/50 template-card template-card-${template.id} flex flex-col ${hideActions ? "h-auto" : "h-full max-h-[700px] hover:shadow-lg hover:-translate-y-1 hover:border-border"}`}>
+      <Card className={`group/card relative overflow-hidden transition-all duration-300 border-border/50 template-card template-card-${template.id} flex flex-col ${hideActions ? "h-auto" : "h-full min-h-[420px] max-h-[700px] hover:shadow-lg hover:-translate-y-1 hover:border-border"}`}>
         <CardHeader className="pb-3 template-card-header shrink-0">
           <div className="flex items-start justify-between template-card-header-top">
             <div className="flex-1 min-w-0 template-card-header-content">
@@ -678,7 +683,7 @@ export function TemplateCard({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity template-action-menu-trigger shrink-0"
+                      className="h-8 w-8 p-0 opacity-0 group-hover/card:opacity-100 transition-opacity template-action-menu-trigger shrink-0"
                     >
                       <MoreVertical className="h-4 w-4" />
                     </Button>
@@ -687,20 +692,18 @@ export function TemplateCard({
                     align="end"
                     className="w-48 template-action-menu"
                   >
-                    {/* <DropdownMenuItem
-                      onClick={handlePreviewTemplate}
-                      className="template-action-preview"
-                    >
-                      <Eye className="mr-2 h-4 w-4" />
-                      {dict.templates.preview}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={handleEditTemplate}
-                      className="template-action-edit"
-                    >
-                      <Edit3 className="mr-2 h-4 w-4" />
-                      {dict.templates.edit_template}
-                    </DropdownMenuItem> */}
+                    {onUseCampaign && template.status === "APPROVED" && (
+                      <>
+                        <DropdownMenuItem
+                          onClick={() => onUseCampaign(template)}
+                          className="cursor-pointer gap-2"
+                        >
+                          <Play className="h-4 w-4" />
+                          {dict?.templates?.useInCampaign ?? "Use in Campaign"}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
                     <DropdownMenuItem
                       onClick={handleCopyTemplate}
                       className="template-action-copy"
@@ -801,8 +804,9 @@ export function TemplateCard({
               </div>
             )}
         </CardContent>
+
       </Card>
-      
+
       {/* Delete Confirmation Dialog */}
       <Dialog 
         open={showDeleteConfirmation} 
@@ -983,6 +987,7 @@ const TemplateManager: React.FC<TemplateManagerProps> = ({
   onEdit,
   onCopy,
   onDelete,
+  onUseCampaign,
   onNextPage,
   onPreviousPage,
 }) => {
@@ -1239,6 +1244,7 @@ const TemplateManager: React.FC<TemplateManagerProps> = ({
                 onEdit={onEdit}
                 onCopy={onCopy}
                 onDelete={onDelete}
+                onUseCampaign={onUseCampaign}
                 dictionary={dict}
               />
             ))}
