@@ -236,7 +236,7 @@ interface TemplateManagerProps {
 // #endregion
 
 // #region FALLBACK DICTIONARY
-const fallbackDictionary: TemplateManagerDictionary = {
+export const fallbackDictionary: TemplateManagerDictionary = {
   templates: {
     deletedSuccessfully: "Template deleted successfully",
     deletedSuccessfullyDescription: "The template has been deleted successfully",
@@ -430,9 +430,10 @@ interface TemplateCardProps {
   onCopy: (templateBody: string) => void;
   onDelete: (templateId: string) => void;
   dictionary: TemplateManagerDictionary;
+  hideActions?: boolean;
 }
 
-function TemplateCard({
+export function TemplateCard({
   template,
   isDeleting,
   onPreview,
@@ -440,6 +441,7 @@ function TemplateCard({
   onCopy,
   onDelete,
   dictionary,
+  hideActions = false,
 }: TemplateCardProps) {
   const dict = dictionary;
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
@@ -621,7 +623,7 @@ function TemplateCard({
                 onClick={handleDocumentClick}
               >
                 <div className="flex items-center space-x-3">
-                  <FileText className="w-8 h-8 text-primary flex-shrink-0" />
+                  <FileText className="w-8 h-8 text-primary shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground">
                       Document
@@ -630,7 +632,7 @@ function TemplateCard({
                       Click to view document
                     </p>
                   </div>
-                  <ExternalLink className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <ExternalLink className="w-4 h-4 text-muted-foreground shrink-0" />
                 </div>
               </div>
             </div>
@@ -643,8 +645,8 @@ function TemplateCard({
 
   return (
     <TooltipProvider>
-      <Card className="group h-full max-h-[700px] transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50 hover:border-border template-card template-card-${template.id} flex flex-col">
-        <CardHeader className="pb-3 template-card-header flex-shrink-0">
+      <Card className={`group transition-all duration-300 border-border/50 template-card template-card-${template.id} flex flex-col ${hideActions ? "h-auto" : "h-full max-h-[700px] hover:shadow-lg hover:-translate-y-1 hover:border-border"}`}>
+        <CardHeader className="pb-3 template-card-header shrink-0">
           <div className="flex items-start justify-between template-card-header-top">
             <div className="flex-1 min-w-0 template-card-header-content">
               <div className="flex items-center gap-2 mb-2 template-card-name-section">
@@ -654,7 +656,7 @@ function TemplateCard({
                 {headerComponent && "format" in headerComponent && (
                   <Tooltip>
                     <TooltipTrigger>
-                      <div className="flex items-center gap-1 text-muted-foreground template-media-indicator flex-shrink-0">
+                      <div className="flex items-center gap-1 text-muted-foreground template-media-indicator shrink-0">
                         <MediaIcon type={headerComponent.format} />
                       </div>
                     </TooltipTrigger>
@@ -671,12 +673,12 @@ function TemplateCard({
               </div>
               <div className="flex items-center justify-between template-card-actions-section">
                 <StatusBadge status={template.status} />
-                <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+                {!hideActions && <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity template-action-menu-trigger flex-shrink-0"
+                      className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity template-action-menu-trigger shrink-0"
                     >
                       <MoreVertical className="h-4 w-4" />
                     </Button>
@@ -720,7 +722,7 @@ function TemplateCard({
                       {dict.templates.delete}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
-                </DropdownMenu>
+                </DropdownMenu>}
               </div>
             </div>
           </div>
@@ -736,22 +738,22 @@ function TemplateCard({
           </div>
         </CardHeader>
 
-        <CardContent className="pt-0 pb-4 flex flex-col flex-1 min-h-0 template-card-content">
+        <CardContent className={`pt-0 pb-4 flex flex-col template-card-content ${hideActions ? "" : "flex-1 min-h-0"}`}>
           {headerComponent &&
             "text" in headerComponent &&
             headerComponent.text && (
-              <div className="mb-3 template-header-section flex-shrink-0">
-                <p className="text-sm font-medium text-foreground template-header-text break-words">
+              <div className="mb-3 template-header-section shrink-0">
+                <p className="text-sm font-medium text-foreground template-header-text wrap-break-word">
                   {headerComponent.text}
                 </p>
               </div>
             )}
 
-          <div className="flex-shrink-0">{renderMedia()}</div>
+          <div className="shrink-0">{renderMedia()}</div>
 
-          <div className="flex-1 min-h-0 space-y-3 template-body-section">
-            <div className="bg-muted/30 rounded-lg p-3 template-message-body h-full overflow-y-auto">
-              <p className="text-sm leading-relaxed text-foreground/90 template-message-text whitespace-pre-wrap break-words">
+          <div className={`space-y-3 template-body-section ${hideActions ? "" : "flex-1 min-h-0"}`}>
+            <div className={`bg-muted/30 rounded-lg p-3 template-message-body ${hideActions ? "" : "h-full overflow-y-auto"}`}>
+              <p className="text-sm leading-relaxed text-foreground/90 template-message-text whitespace-pre-wrap wrap-break-word">
                 {bodyComponent?.text}
               </p>
             </div>
@@ -760,9 +762,9 @@ function TemplateCard({
           {footerComponent &&
             footerComponent.text &&
             footerComponent.text.trim() && (
-              <div className="flex-shrink-0 mt-3">
+              <div className="shrink-0 mt-3">
                 <Separator className="mb-2 template-footer-separator" />
-                <p className="text-xs text-muted-foreground italic template-footer-text break-words">
+                <p className="text-xs text-muted-foreground italic template-footer-text wrap-break-word">
                   {footerComponent.text}
                 </p>
               </div>
@@ -771,7 +773,7 @@ function TemplateCard({
           {buttonsComponent &&
             "buttons" in buttonsComponent &&
             buttonsComponent.buttons.length > 0 && (
-              <div className="flex-shrink-0 mt-4 space-y-2 template-buttons-section">
+              <div className="shrink-0 mt-4 space-y-2 template-buttons-section">
                 <Separator className="template-buttons-separator" />
                 <div className="space-y-1.5 template-buttons-container overflow-y-auto max-h-[200px]">
                   {buttonsComponent.buttons.map((button, index) => (

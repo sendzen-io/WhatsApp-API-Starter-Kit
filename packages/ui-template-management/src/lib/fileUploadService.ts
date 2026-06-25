@@ -1,6 +1,7 @@
 /**
  * File Upload Service for Template Management
  * Implements the 3-step API process for file uploads
+ * Uses dependency injection for API calls to work with the app's authenticated API client
  */
 
 export interface FileUploadParams {
@@ -22,13 +23,80 @@ export interface FileUploadResult {
   error?: string;
 }
 
-export class FileUploadService {
-  private baseUrl: string;
-  private appId: string | null = null;
-  private partnerConfig: { partner_id: string; meta_app_id: string; meta_partner_config_id: string } | null = null;
+export interface PartnerConfig {
+  partner_id: string;
+  meta_app_id: string;
+  meta_partner_config_id: string;
+}
 
-  constructor(baseUrl: string = 'https://api.sendzen.io') {
-    this.baseUrl = baseUrl;
+// Types for injectable API functions
+export type GetPartnerConfigFn = (locationHost: string) => Promise<PartnerConfig>;
+
+export interface CreateUploadSessionParams {
+  appId: string;
+  fileName: string;
+  fileType: string;
+  fileLength: number;
+  wabaId: string;
+}
+
+export interface CreateUploadSessionResponse {
+  id: string;
+  file_id?: string;
+}
+
+export type CreateUploadSessionFn = (params: CreateUploadSessionParams) => Promise<CreateUploadSessionResponse>;
+
+export interface UploadFileDataParams {
+  wabaId: string;
+  uploadSession: string;
+  fileData: ArrayBuffer;
+  fileOffset?: number;
+}
+
+export interface UploadFileDataResponse {
+  h?: string;
+  file_id?: string;
+}
+
+export type UploadFileDataFn = (params: UploadFileDataParams) => Promise<UploadFileDataResponse>;
+
+export class FileUploadService {
+  private appId: string | null = null;
+  private partnerConfig: PartnerConfig | null = null;
+  
+  // Injectable API functions
+  private getPartnerConfigFn: GetPartnerConfigFn | null = null;
+  private createUploadSessionFn: CreateUploadSessionFn | null = null;
+  private uploadFileDataFn: UploadFileDataFn | null = null;
+
+  /**
+   * Configure the service with API functions
+   * This allows dependency injection of the app's authenticated API client
+   */
+  configure(options: {
+    getPartnerConfig: GetPartnerConfigFn;
+    createUploadSession: CreateUploadSessionFn;
+    uploadFileData: UploadFileDataFn;
+  }): void {
+    this.getPartnerConfigFn = options.getPartnerConfig;
+    this.createUploadSessionFn = options.createUploadSession;
+    this.uploadFileDataFn = options.uploadFileData;
+  }
+
+  /**
+   * Legacy method for backward compatibility
+   * @deprecated Use configure() instead
+   */
+  setGetPartnerConfigFn(fn: GetPartnerConfigFn): void {
+    this.getPartnerConfigFn = fn;
+  }
+
+  /**
+   * Check if the service is properly configured
+   */
+  isConfigured(): boolean {
+    return !!(this.getPartnerConfigFn && this.createUploadSessionFn && this.uploadFileDataFn);
   }
 
   /**
@@ -36,14 +104,11 @@ export class FileUploadService {
    */
   private extractErrorDetail(errorMessage: string): string {
     try {
-      // Try to parse JSON from the error message
-      // Look for JSON object in the message (e.g., "400 - {...}")
       const jsonMatch = errorMessage.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const jsonStr = jsonMatch[0];
         const errorData = JSON.parse(jsonStr);
         
-        // Try to get detail first, then message, then error.detail, then error.message
         if (errorData.error?.detail) {
           return errorData.error.detail;
         }
@@ -57,7 +122,7 @@ export class FileUploadService {
           return errorData.message;
         }
       }
-    } catch (parseError) {
+    } catch {
       // If JSON parsing fails, return the original message
     }
     
@@ -66,32 +131,27 @@ export class FileUploadService {
 
   /**
    * Step 1: Get app ID from partner config
-   * This should be called during onboarding, but we'll implement it here for completeness
    */
   private async getAppId(): Promise<string> {
     if (this.appId) {
       return this.appId;
     }
-    let locationHost = window.location.hostname;
-    if(locationHost === 'localhost'){
-        locationHost = 'app.sendzen.io';
-    }else{
-        locationHost = 'app.sendzen.io';
+
+    if (!this.getPartnerConfigFn) {
+      throw new Error('Service not configured. Call configure() first with the API functions.');
     }
+
+    let locationHost = window.location.hostname;
+    if (locationHost === 'localhost') {
+      locationHost = 'app.sendzen.io';
+    } else {
+      locationHost = 'app.sendzen.io';
+    }
+
     try {
-      // Get partner config to retrieve app ID
-      const response = await fetch(`${this.baseUrl}/v1/partner/config/${encodeURIComponent(locationHost)}`, {
-        method: 'GET',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to get partner config: ${response.status}`);
-      }
-
-      const data = await response.json();
-      this.partnerConfig = data.data;
-      this.appId = data.data?.meta_app_id || null;
+      const config = await this.getPartnerConfigFn(locationHost);
+      this.partnerConfig = config;
+      this.appId = config.meta_app_id || null;
       
       if (!this.appId) {
         throw new Error('No app ID found in partner config');
@@ -105,64 +165,34 @@ export class FileUploadService {
 
   /**
    * Step 2: Create upload session
-   * POST /v1/{appId}/uploads
    */
   private async createUploadSession(params: FileUploadParams): Promise<UploadSessionResponse> {
-    const appId = await this.getAppId();
-    
-    const queryParams = new URLSearchParams({
-      file_name: params.fileName,
-      file_type: params.fileType,
-      file_length: params.fileLength.toString(),
-    });
+    if (!this.createUploadSessionFn) {
+      throw new Error('Service not configured. Call configure() first with the API functions.');
+    }
 
-    const requestBody = {
-      waba_id: params.wabaId,
-    };
+    const appId = await this.getAppId();
 
     try {
-      const response = await fetch(`${this.baseUrl}/v1/${appId}/uploads?${queryParams}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'file_offset': '0'
-        },
-        credentials: 'include', // Use HttpOnly cookies for authentication
-        body: JSON.stringify(requestBody),
+      const response = await this.createUploadSessionFn({
+        appId,
+        fileName: params.fileName,
+        fileType: params.fileType,
+        fileLength: params.fileLength,
+        wabaId: params.wabaId,
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        const errorDetail = this.extractErrorDetail(errorText);
-        throw new Error(errorDetail);
-      }
-
-      // Check if response has content before trying to parse JSON
-      const responseText = await response.text();
       
-      let data: any = {};
-      if (responseText.trim()) {
-        try {
-          data = JSON.parse(responseText);
-        } catch (parseError) {
-          throw new Error(`Invalid JSON response from upload session creation: ${responseText}`);
-        }
-      } else {
-        throw new Error('Empty response from upload session creation');
-      }
-      
-      const uploadSession = data.data?.id || data.upload_session || data.uploadSession;
+      const uploadSession = response.id;
       if (!uploadSession) {
         throw new Error('No upload session ID found in response');
       }
       
       return {
         uploadSession,
-        fileId: data.data?.file_id || data.file_id || data.fileId,
+        fileId: response.file_id,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      // Extract clean error detail if the error message contains JSON
       const cleanError = this.extractErrorDetail(errorMessage);
       throw new Error(cleanError);
     }
@@ -170,57 +200,33 @@ export class FileUploadService {
 
   /**
    * Step 3: Upload file data
-   * POST /v1/{whatsappBusinessAccountId}/{uploadSession}
    */
   private async uploadFileData(
-    whatsappBusinessAccountId: string,
+    wabaId: string,
     uploadSession: string,
     file: File,
     fileOffset: number = 0
   ): Promise<FileUploadResult> {
+    if (!this.uploadFileDataFn) {
+      throw new Error('Service not configured. Call configure() first with the API functions.');
+    }
+
     try {
-    
       const arrayBuffer = await file.arrayBuffer();
       
-      const response = await fetch(`${this.baseUrl}/v1/${whatsappBusinessAccountId}/${uploadSession}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/octet-stream',
-          'file_offset': fileOffset.toString(),
-        },
-        credentials: 'include', // Use HttpOnly cookies for authentication
-        body: arrayBuffer,
+      const response = await this.uploadFileDataFn({
+        wabaId,
+        uploadSession,
+        fileData: arrayBuffer,
+        fileOffset,
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        const errorDetail = this.extractErrorDetail(errorText);
-        throw new Error(errorDetail);
-      }
-
-      // Check if response has content before trying to parse JSON
-      const responseText = await response.text();
-      
-      let data: any = {};
-      if (responseText.trim()) {
-        try {
-          data = JSON.parse(responseText);
-        } catch (parseError) {
-          // If response is not JSON but status is 200, consider it successful
-          return {
-            success: true,
-            fileId: undefined, // No file ID available
-          };
-        }
-      }
       
       return {
         success: true,
-        fileId: data.data?.h || data.data?.file_id || data.file_id || data.fileId,
+        fileId: response.h || response.file_id,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      // Extract clean error detail if the error message contains JSON
       const cleanError = this.extractErrorDetail(errorMessage);
       return {
         success: false,
@@ -234,7 +240,13 @@ export class FileUploadService {
    */
   async uploadFile(file: File, wabaId: string | null = null): Promise<FileUploadResult> {
     try {
-      // In open source mode, WABA functionality is not available
+      if (!this.isConfigured()) {
+        return {
+          success: false,
+          error: 'File upload service not configured. Please ensure the service is properly initialized.',
+        };
+      }
+
       if (!wabaId) {
         return {
           success: false,
@@ -286,7 +298,7 @@ export class FileUploadService {
 
       // Step 3: Upload file data
       const uploadResult = await this.uploadFileData(
-        wabaId, // Using wabaId as whatsappBusinessAccountId
+        wabaId,
         uploadSessionResponse.uploadSession,
         file
       );
@@ -294,7 +306,6 @@ export class FileUploadService {
       return uploadResult;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred during upload';
-      // Extract clean error detail if the error message contains JSON
       const cleanError = this.extractErrorDetail(errorMessage);
       return {
         success: false,

@@ -1,5 +1,5 @@
 // Export all components
-export { default as TemplateManager } from './components/TemplateManager';
+export { default as TemplateManager, TemplateCard, fallbackDictionary } from './components/TemplateManager';
 export { default as CreateTemplateUI } from './components/CreateTemplateUI';
 export { default as HeaderComponentEditor } from './components/HeaderComponentEditor';
 export { default as FilePreview } from './components/FilePreview';
@@ -18,3 +18,13 @@ export type * from './types/templateTypes';
 
 // Export services
 export { fileUploadService, FileUploadService } from './lib/fileUploadService';
+export type { 
+  GetPartnerConfigFn, 
+  PartnerConfig,
+  CreateUploadSessionFn,
+  CreateUploadSessionParams,
+  CreateUploadSessionResponse,
+  UploadFileDataFn,
+  UploadFileDataParams,
+  UploadFileDataResponse,
+} from './lib/fileUploadService';
