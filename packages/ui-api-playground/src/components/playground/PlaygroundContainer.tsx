@@ -739,7 +739,7 @@ export default function PlaygroundContainer({
               {apiEndpoint === 'facebook' && (
                 <div className="config-section">
                   <h3 className="flex items-center gap-2 text-base font-semibold mb-2 whitespace-nowrap">
-                    <Settings className="h-4 w-4 flex-shrink-0" />
+                    <Settings className="h-4 w-4 shrink-0" />
                     <span className="whitespace-nowrap">Business Account</span>
                   </h3>
                   <div className="space-y-2">
@@ -784,7 +784,7 @@ export default function PlaygroundContainer({
               {/* WhatsApp Account */}
               <div className="config-section">
                 <h3 className="flex items-center gap-2 text-base font-semibold mb-2 whitespace-nowrap">
-                  <Phone className="h-4 w-4 flex-shrink-0" />
+                  <Phone className="h-4 w-4 shrink-0" />
                   <span>WhatsApp Account</span>
                 </h3>
                 <div className="space-y-2">
@@ -796,7 +796,7 @@ export default function PlaygroundContainer({
                   ) : wabaError ? (
                     <div className="space-y-2">
                       <div className="flex items-start gap-1 text-sm text-red-600">
-                        <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                        <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
                         <span>{wabaError}</span>
                       </div>
                       <Button 
@@ -899,7 +899,7 @@ export default function PlaygroundContainer({
                     <AccordionItem value="waba-details">
                       <AccordionTrigger className="text-sm py-2 hover:no-underline">
                         <div className="flex items-center gap-2 whitespace-nowrap">
-                          <User className="h-4 w-4 flex-shrink-0" />
+                          <User className="h-4 w-4 shrink-0" />
                           <span>WABA Details</span>
                         </div>
                       </AccordionTrigger>
@@ -953,7 +953,7 @@ export default function PlaygroundContainer({
               {/* Recipient Details */}
               <div className="config-section">
                 <h3 className="flex items-center gap-2 text-base font-semibold mb-2 whitespace-nowrap">
-                  <User className="h-4 w-4 flex-shrink-0" />
+                  <User className="h-4 w-4 shrink-0" />
                   <span>Recipient Details</span>
                 </h3>
                 <div className="space-y-2">
@@ -979,7 +979,7 @@ export default function PlaygroundContainer({
                   />
                   {apiValidationErrors.recipientPhone && (
                     <div className="flex items-start gap-1 text-sm text-red-600">
-                      <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
                       <span>{apiValidationErrors.recipientPhone}</span>
                     </div>
                   )}
@@ -1059,7 +1059,7 @@ export default function PlaygroundContainer({
                     <div>
                       {apiValidationErrors.sessionMessageText && (
                         <div className="flex items-start gap-1 text-sm text-red-600">
-                          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
                           <span>{apiValidationErrors.sessionMessageText}</span>
                         </div>
                       )}
@@ -1094,7 +1094,7 @@ export default function PlaygroundContainer({
                 <React.Fragment>
                 <div className="config-section">
                   <h3 className="flex items-center gap-2 text-base font-semibold mb-2 whitespace-nowrap">
-                    <MessageSquare className="h-4 w-4 flex-shrink-0" />
+                    <MessageSquare className="h-4 w-4 shrink-0" />
                     <span>Message Templates</span>
                   {templatesError && (
                     <Button 
@@ -1114,7 +1114,7 @@ export default function PlaygroundContainer({
                   ) : templatesError ? (
                     <div className="space-y-2">
                       <div className="flex items-start gap-1 text-sm text-red-600">
-                        <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                        <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
                         <span>{templatesError}</span>
                       </div>
                       <Button 
@@ -1224,7 +1224,7 @@ export default function PlaygroundContainer({
                       </Select>
                       {apiValidationErrors.selectedTemplate && (
                         <div className="flex items-start gap-1 text-sm text-red-600">
-                          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
                           <span>{apiValidationErrors.selectedTemplate}</span>
                         </div>
                       )}
@@ -1241,7 +1241,7 @@ export default function PlaygroundContainer({
                 <div className="template-preview mb-2">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-sm font-medium flex items-center gap-2 whitespace-nowrap">
-                      <MessageSquare className="h-4 w-4 flex-shrink-0" />
+                      <MessageSquare className="h-4 w-4 shrink-0" />
                       <span>Template Preview</span>
                     </h4>
                     <Button
@@ -1293,7 +1293,7 @@ export default function PlaygroundContainer({
               <hr className="border-border my-4" />
                 <div className="placeholder-editor">
                   <h5 className="text-base flex items-center gap-2 text-text-primary font-medium mb-2 whitespace-nowrap">
-                    <Code className="h-4 w-4 flex-shrink-0" />
+                    <Code className="h-4 w-4 shrink-0" />
                     <span>Edit Placeholder Values</span>
                   </h5>
                   <div className="placeholder-inputs space-y-2">
@@ -1364,7 +1364,7 @@ export default function PlaygroundContainer({
                           />
                           {(validationErrors[key] || apiValidationErrors[key]) && (
                             <div className="flex items-start gap-1 text-sm text-red-600">
-                              <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                              <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
                               <span>{validationErrors[key] || apiValidationErrors[key]}</span>
                             </div>
                           )}
