@@ -697,9 +697,9 @@ export default function PlaygroundContainer({
         {/* Column 2: Configuration */}
         <div className="flex flex-col flex-1 min-w-0 gap-2 h-full">
           <Box className="flex flex-col h-full overflow-hidden shadow-sm hover:shadow-md transition-shadow border rounded-lg">
-            <BoxHeader className="pb-3 w-full !grid-cols-1 !auto-rows-auto">
-            <BoxTitle className="text-base flex items-center gap-2 text-foreground w-full !leading-normal">
-              <div className="h-4 w-4 rounded flex items-center justify-center flex-shrink-0">
+            <BoxHeader className="pb-3 w-full grid-cols-1! auto-rows-auto!">
+            <BoxTitle className="text-base flex items-center gap-2 text-foreground w-full leading-normal!">
+              <div className="h-4 w-4 rounded flex items-center justify-center shrink-0">
                 <ArchiveIcon className="w-4 h-4 text-primary" />
               </div>
               <span className="whitespace-nowrap">Configuration</span>
