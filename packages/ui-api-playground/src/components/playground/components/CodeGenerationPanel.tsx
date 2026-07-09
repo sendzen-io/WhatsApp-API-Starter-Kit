@@ -66,7 +66,7 @@ export const CodeGenerationPanel: React.FC<CodeGenerationPanelProps> = ({
             {PROGRAMMING_LANGUAGES.map((lang) => (
               <button
                 key={lang.value}
-                className={`language-tab flex items-center gap-1 px-3 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex-shrink-0 min-w-fit ${
+                className={`language-tab flex items-center gap-1 px-3 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 min-w-fit ${
                   selectedLanguage === lang.value
                     ? 'border-primary text-primary bg-primary/5'
                     : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground'

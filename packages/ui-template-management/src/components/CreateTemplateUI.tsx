@@ -1114,7 +1114,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                 </p>
               </CardDescription>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="text-xs sm:text-sm">
@@ -1227,7 +1227,7 @@ const CreateTemplateUI: React.FC<CreateTemplateUIProps> = ({
                       </Button>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0" onClick={() => removeButton(index)}><Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-destructive"/></Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 shrink-0" onClick={() => removeButton(index)}><Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-destructive"/></Button>
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">

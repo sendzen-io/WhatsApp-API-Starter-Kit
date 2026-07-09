@@ -38,7 +38,7 @@ export const ApiRequestSection: React.FC<ApiRequestSectionProps> = ({
   };
 
   return (
-    <Box className="flex flex-col flex-shrink-0 shadow-sm hover:shadow-md transition-shadow border rounded-lg">
+    <Box className="flex flex-col shrink-0 shadow-sm hover:shadow-md transition-shadow border rounded-lg">
       <BoxHeader className="pb-3">
         <BoxTitle className="text-base flex items-center gap-2 text-foreground">
           <div className="h-4 w-4 rounded flex items-center justify-center">
