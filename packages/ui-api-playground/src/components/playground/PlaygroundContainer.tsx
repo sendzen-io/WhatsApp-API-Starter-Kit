@@ -494,7 +494,7 @@ export default function PlaygroundContainer({
 
   const generateCode = (language: string, config: PlaygroundConfig) => {
     const endpointUrl = apiEndpoint === 'sendzen' 
-      ? 'https://api.sendzen.io/v1/messages'
+      ? '<YOUR_API_BASE_URL>/v1/messages'
       : `https://graph.facebook.com/v21.0/${config.phoneNumberId}/messages`;
     const requestBody = generateRequestBody(config);
     const actualToken = apiEndpoint === 'sendzen' 
