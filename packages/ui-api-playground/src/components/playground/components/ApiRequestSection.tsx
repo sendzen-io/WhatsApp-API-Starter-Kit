@@ -21,7 +21,7 @@ export const ApiRequestSection: React.FC<ApiRequestSectionProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
   const endpointUrl = apiEndpoint === 'sendzen' 
-    ? 'https://api.sendzen.io/v1/messages'
+    ? '<YOUR_API_BASE_URL>/v1/messages'
     : `https://graph.facebook.com/v21.0/${config.phoneNumberId || '{phone_number_id}'}/messages`;
 
   const requestBody = generateRequestBody(config);
@@ -87,7 +87,7 @@ export const ApiRequestSection: React.FC<ApiRequestSectionProps> = ({
             </Button>
           </div>
           <div className="bg-background/30 border-2 border-dotted border-border/50 p-3 rounded-lg max-h-[150px] overflow-auto">
-            <pre className="text-sm font-mono whitespace-pre-wrap break-words text-muted-foreground">
+            <pre className="text-sm font-mono whitespace-pre-wrap wrap-break-word text-muted-foreground">
               {requestBodyJson}
             </pre>
           </div>
