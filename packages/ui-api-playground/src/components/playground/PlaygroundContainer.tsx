@@ -611,8 +611,9 @@ export default function PlaygroundContainer({
     try {
       const requestBody = generateRequestBody(config);
       
+       // Product app: same-origin /v1 rewrite → API_BASE_URL. Standalone playground falls back to prod.
        const endpointUrl = apiEndpoint === 'sendzen' 
-         ? 'https://api.sendzen.io/v1/messages'
+         ? '/v1/messages'
          : `https://graph.facebook.com/v21.0/${config.phoneNumberId}/messages`;
        
        const response = await fetch(endpointUrl, {
