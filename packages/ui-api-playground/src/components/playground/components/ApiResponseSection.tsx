@@ -50,7 +50,7 @@ export const ApiResponseSection: React.FC<ApiResponseSectionProps> = ({
   // Helper function to get the notifications URL with proper locale handling
   const getNotificationsUrl = (): string => {
     if (typeof window === 'undefined') {
-      return '/notifications';
+      return '/whatsapp-api/notifications';
     }
 
     const pathname = window.location.pathname;
@@ -62,9 +62,9 @@ export const ApiResponseSection: React.FC<ApiResponseSectionProps> = ({
 
     // For default locale (en), don't add prefix; for others, add locale prefix
     if (locale === defaultLocale) {
-      return '/notifications';
+      return '/whatsapp-api/notifications';
     }
-    return `/${locale}/notifications`;
+    return `/${locale}/whatsapp-api/notifications`;
   };
   return (
     <Box className="flex flex-col flex-1 min-h-0 shadow-sm hover:shadow-md transition-shadow border rounded-lg">
